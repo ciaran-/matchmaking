@@ -14,3 +14,6 @@ todos.json
 
 # Local Netlify folder
 .netlify
+
+#tanstack build output
+*routeTree.gen.ts
