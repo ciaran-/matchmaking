@@ -1,10 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from '@tanstack/react-router';
+import { getLeaguePlaces } from '@/data/league-places';
 
-export const Route = createFileRoute("/league")({
+export const Route = createFileRoute('/league')({
+	ssr: 'data-only',
 	component: LeagueTable,
+	loader: async () => await getLeaguePlaces(),
 });
 
 function LeagueTable() {
+	const leaguePlaces = Route.useLoaderData();
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
 			<section className="relative py-20 px-6 text-center overflow-hidden">
@@ -37,18 +41,16 @@ function LeagueTable() {
 						</tr>
 					</thead>
 					<tbody>
-						<tr>
-							<td className="border p-2 text-white">1</td>
-							<td className="border p-2 text-white">Walker</td>
-							<td className="border p-2 text-white">3-0</td>
-							<td className="border p-2 text-white">1750</td>
-						</tr>
-						<tr>
-							<td className="border p-2 text-white">2</td>
-							<td className="border p-2 text-white">Alice</td>
-							<td className="border p-2 text-white">2-1</td>
-							<td className="border p-2 text-white">1600</td>
-						</tr>
+						{leaguePlaces.map((place) => (
+							<tr key={place.user}>
+								<td className="border p-2 text-white">{place.id}</td>
+								<td className="border p-2 text-white">{place.user}</td>
+								<td className="border p-2 text-white">
+									{place.record[0]}-{place.record[1]}
+								</td>
+								<td className="border p-2 text-white">{place.rating}</td>
+							</tr>
+						))}
 					</tbody>
 				</table>
 			</section>
