@@ -1,5 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { getLeaguePlaces } from '@/data/league-places';
+import { createServerFn } from '@tanstack/react-start';
+import { prisma } from '@/db';
+
+const getLeaguePlaces = createServerFn({
+	method: 'GET',
+}).handler(async () => {
+	return await (prisma
+		? prisma.user.findMany({ orderBy: { currentRating: 'desc' } })
+		: []);
+});
 
 export const Route = createFileRoute('/league')({
 	ssr: 'data-only',
@@ -41,19 +50,21 @@ function LeagueTable() {
 						</tr>
 					</thead>
 					<tbody>
-						{leaguePlaces.map((place) => (
-							<tr
-								className="border-y border-white text-white text-center"
-								key={place.user}
-							>
-								<td className="py-1">{place.id}</td>
-								<td className="py-1">{place.user}</td>
-								<td className="py-1">
-									{place.record[0]}-{place.record[1]}
-								</td>
-								<td className="py-1">{place.rating}</td>
-							</tr>
-						))}
+						{leaguePlaces.length > 0 &&
+							leaguePlaces.map((player, index) => (
+								<tr
+									className="border-y border-white text-white text-center"
+									key={player.username}
+								>
+									<td className="py-1">{index + 1}</td>
+									<td className="py-1">{player.username}</td>
+									<td className="py-1">
+										X-X
+										{/* {player.record[0]}-{player.record[1]} */}
+									</td>
+									<td className="py-1">{player.currentRating}</td>
+								</tr>
+							))}
 					</tbody>
 				</table>
 			</section>
