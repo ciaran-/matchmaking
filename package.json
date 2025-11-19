@@ -17,6 +17,7 @@
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:seed": "dotenv -e .env.local -- prisma db seed",
+    "db:reset":  "dotenv -e .env.local -- prisma migrate reset",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
