@@ -1,3 +1,5 @@
+// ---------- GENERATOR & DATASOURCE ----------
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,8 +9,84 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Todo {
-  id        Int      @id @default(autoincrement())
-  title     String
+// ---------- MODELS ----------
+
+model User {
+  id        String   @id @default(cuid())
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  email         String @unique
+  username      String @unique
+  // Live rating used for matchmaking & new games
+  currentRating Int    @default(1000)
+
+  // Relation to game participations
+  gameParticipations GameParticipant[]
+
+  @@index([currentRating])
+}
+
+model GameResult {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Optional: mode for matchmaking or analytics
+  mode GameMode
+
+  // Team scores – for Elo you usually just care win/draw/loss
+  // but explicit scores can be useful for UX & stats
+  teamAScore Int
+  teamBScore Int
+
+  // Optional: map, playlist, duration, etc.
+  // mapName      String?
+  // durationSecs Int?
+
+  participants GameParticipant[]
+
+  // Convenience indexes for analytics/lookups
+  @@index([mode, createdAt])
+}
+
+model GameParticipant {
+  // Composite primary key: a user appears at most once per game
+  gameResultId String
+  userId       String
+
+  team Team
+
+  // Rating snapshot for this specific game
+  ratingBefore Int
+  ratingAfter  Int
+  ratingChange Int
+
+  // Space for per-player stats in that game:
+  // kills        Int?
+  // deaths       Int?
+  // assists      Int?
+  // score        Int?
+
+  gameResult GameResult @relation(fields: [gameResultId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@id([gameResultId, userId])
+  @@index([userId])
+  @@index([gameResultId, team])
+}
+
+// ---------- ENUMS ----------
+
+enum Team {
+  A
+  B
+}
+
+enum GameMode {
+  ONE_VS_ONE
+  TEAM_VS_TEAM
+  // Add more as needed, e.g.:
+  // RANKED
+  // CASUAL
+  // CUSTOM
 }
