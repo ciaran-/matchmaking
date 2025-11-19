@@ -33,7 +33,7 @@ function LeagueTable() {
 			<section className="py-16 px-6 max-w-7xl mx-auto flex flex-col items-center">
 				<table>
 					<thead>
-						<tr>
+						<tr className="border border-white bg-teal-600">
 							<th className="text-white px-4 py-2">Rank</th>
 							<th className="text-white px-4 py-2">Player</th>
 							<th className="text-white px-4 py-2">Record</th>
@@ -42,13 +42,16 @@ function LeagueTable() {
 					</thead>
 					<tbody>
 						{leaguePlaces.map((place) => (
-							<tr key={place.user}>
-								<td className="border p-2 text-white">{place.id}</td>
-								<td className="border p-2 text-white">{place.user}</td>
-								<td className="border p-2 text-white">
+							<tr
+								className="border-y border-white text-white text-center"
+								key={place.user}
+							>
+								<td className="py-1">{place.id}</td>
+								<td className="py-1">{place.user}</td>
+								<td className="py-1">
 									{place.record[0]}-{place.record[1]}
 								</td>
-								<td className="border p-2 text-white">{place.rating}</td>
+								<td className="py-1">{place.rating}</td>
 							</tr>
 						))}
 					</tbody>
