@@ -6,7 +6,10 @@ const getLeaguePlaces = createServerFn({
 	method: 'GET',
 }).handler(async () => {
 	return await (prisma
-		? prisma.user.findMany({ orderBy: { currentRating: 'desc' } })
+		? prisma.user.findMany({
+				orderBy: { currentRating: 'desc' },
+				include: { gameParticipations: true },
+			})
 		: []);
 });
 
@@ -45,7 +48,9 @@ function LeagueTable() {
 						<tr className="border border-white bg-teal-600">
 							<th className="text-white px-4 py-2">Rank</th>
 							<th className="text-white px-4 py-2">Player</th>
-							<th className="text-white px-4 py-2">Record</th>
+							<th className="text-white px-4 py-2">Wins</th>
+							<th className="text-white px-4 py-2">Losses</th>
+							<th className="text-white px-4 py-2">Games Played</th>
 							<th className="text-white px-4 py-2">Rating</th>
 						</tr>
 					</thead>
@@ -59,9 +64,20 @@ function LeagueTable() {
 									<td className="py-1">{index + 1}</td>
 									<td className="py-1">{player.username}</td>
 									<td className="py-1">
-										X-X
-										{/* {player.record[0]}-{player.record[1]} */}
+										{
+											player.gameParticipations.filter(
+												(game) => game.ratingChange > 0,
+											).length
+										}
 									</td>
+									<td className="py-1">
+										{
+											player.gameParticipations.filter(
+												(game) => game.ratingChange < 0,
+											).length
+										}
+									</td>
+									<td className="py-1">{player.gameParticipations.length}</td>
 									<td className="py-1">{player.currentRating}</td>
 								</tr>
 							))}
