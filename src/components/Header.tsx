@@ -1,10 +1,11 @@
+import { useUser } from '@clerk/clerk-react';
 import { Link } from '@tanstack/react-router';
 import { Home, Menu, Rocket, Trophy, X } from 'lucide-react';
-
 import { useState } from 'react';
 import ClerkHeader from '../integrations/clerk/header-user.tsx';
 
 export default function Header() {
+	const { isSignedIn } = useUser();
 	const [isOpen, setIsOpen] = useState(false);
 	const [groupedExpanded, setGroupedExpanded] = useState<
 		Record<string, boolean>
@@ -59,18 +60,20 @@ export default function Header() {
 						<span className="font-medium">Home</span>
 					</Link>
 
-					<Link
-						to="/league"
-						onClick={() => setIsOpen(false)}
-						className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
-						activeProps={{
-							className:
-								'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
-						}}
-					>
-						<Trophy size={20} />
-						<span className="font-medium">League Table</span>
-					</Link>
+					{isSignedIn && (
+						<Link
+							to="/league"
+							onClick={() => setIsOpen(false)}
+							className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors mb-2"
+							activeProps={{
+								className:
+									'flex items-center gap-3 p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition-colors mb-2',
+							}}
+						>
+							<Trophy size={20} />
+							<span className="font-medium">League Table</span>
+						</Link>
+					)}
 				</nav>
 
 				<div className="p-4 border-t border-gray-700 bg-gray-800 flex flex-col gap-2">

@@ -1,3 +1,4 @@
+import { useUser } from '@clerk/clerk-react';
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { prisma } from '@/db';
@@ -20,7 +21,16 @@ export const Route = createFileRoute('/league')({
 });
 
 function LeagueTable() {
+	const { isSignedIn, isLoaded } = useUser();
 	const leaguePlaces = Route.useLoaderData();
+
+	if (!isLoaded) {
+		return <div className="p-4">Loading...</div>;
+	}
+
+	if (!isSignedIn) {
+		return <div className="p-4">Sign in to view this page</div>;
+	}
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
 			<section className="relative py-20 px-6 text-center overflow-hidden">
