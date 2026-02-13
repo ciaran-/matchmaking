@@ -25,7 +25,7 @@
     "@clerk/clerk-react": "^5.49.0",
     "@netlify/vite-plugin-tanstack-start": "^1.0.2",
     "@prisma/client": "^6.16.3",
-    "@sentry/tanstackstart-react": "^10.22.0",
+    "@sentry/tanstackstart-react": "^10.29.0",
     "@storybook/react-vite": "^9.1.9",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/db": "^0.4.3",
