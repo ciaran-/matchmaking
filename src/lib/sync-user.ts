@@ -30,17 +30,12 @@ export async function deriveUniqueUsername(
 			attempt === 0
 				? base
 				: `${base}${Math.floor(1000 + Math.random() * 9000)}`;
-		try {
-			// We attempt the upsert at the call-site; here we just check uniqueness
-			// by trying a findUnique. If null, the name is available.
-			const existing = await prisma.user.findUnique({
-				where: { username: candidate },
-			});
-			if (!existing) return candidate;
-		} catch (e) {
-			// Unexpected DB error — propagate.
-			throw e;
-		}
+		// We attempt the upsert at the call-site; here we just check uniqueness
+		// by trying a findUnique. If null, the name is available.
+		const existing = await prisma.user.findUnique({
+			where: { username: candidate },
+		});
+		if (!existing) return candidate;
 	}
 
 	throw new Error(

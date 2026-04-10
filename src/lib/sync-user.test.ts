@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ---------- Mocks ----------
 
-vi.mock('@tanstack/start-server-core', () => ({
+vi.mock('@tanstack/react-start/server', () => ({
 	getRequest: vi.fn(),
 	getCookie: vi.fn(),
 	setCookie: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('@/db', () => ({
 }))
 
 import { createClerkClient } from '@clerk/backend'
-import { getCookie, setCookie, getRequest } from '@tanstack/start-server-core'
+import { getCookie, setCookie, getRequest } from '@tanstack/react-start/server'
 import { prisma } from '@/db'
 import {
 	isPrismaUniqueConstraintError,
