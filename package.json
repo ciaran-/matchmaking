@@ -22,6 +22,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@clerk/backend": "^3.2.8",
     "@clerk/clerk-react": "^5.49.0",
     "@netlify/vite-plugin-tanstack-start": "^1.0.2",
     "@prisma/client": "^6.16.3",
