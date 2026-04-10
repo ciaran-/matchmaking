@@ -174,6 +174,7 @@ describe('syncUser', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
 		process.env.CLERK_SECRET_KEY = 'test_secret_key'
+		process.env.VITE_CLERK_PUBLISHABLE_KEY = 'pk_test_placeholder'
 		mockGetRequest.mockReturnValue(new Request('http://localhost/'))
 	})
 
