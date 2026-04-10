@@ -72,6 +72,16 @@ For server-only modules (anything that uses Node APIs, Prisma, or TanStack Start
 
 When mocking with `vi.mock()`, mock at the module boundary — mock `@/db` to stub Prisma, mock the Clerk SDK package to stub auth, and mock `@tanstack/react-start/server` to stub request/response utilities.
 
+Any `process.env` guard added to production code (i.e. `if (!process.env.FOO) throw`) must have a corresponding stub in the relevant test file's `beforeEach`:
+
+```ts
+beforeEach(() => {
+  process.env.FOO = 'test_value'
+})
+```
+
+Forgetting this causes tests to pass locally (where the real env var exists) but fail in CI.
+
 ## Prisma MCP Server
 
 The Prisma MCP server is configured for this project and gives Claude Code direct access to `migrate-dev`, `migrate-reset`, and `migrate-status` without needing an interactive terminal.
