@@ -74,7 +74,11 @@ export async function syncUser(): Promise<User | null> {
 	if (!secretKey) {
 		throw new Error('Missing required environment variable: CLERK_SECRET_KEY');
 	}
-	const clerk = createClerkClient({ secretKey });
+	const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
+	if (!publishableKey) {
+		throw new Error('Missing required environment variable: VITE_CLERK_PUBLISHABLE_KEY');
+	}
+	const clerk = createClerkClient({ secretKey, publishableKey });
 
 	const request = getRequest();
 	const auth = await clerk.authenticateRequest(request);
