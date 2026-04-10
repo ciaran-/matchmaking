@@ -9,6 +9,7 @@
     "test": "vitest run",
     "format": "biome format",
     "lint": "biome lint",
+    "lint:fix": "biome lint --write",
     "check": "biome check",
     "start": "node --import ./.output/server/instrument.server.mjs .output/server/index.mjs",
     "post-cta-init": "npx create-db@latest",
