@@ -68,7 +68,11 @@ export async function syncUser(): Promise<User | null> {
 	// CLERK_SECRET_KEY is read here, inside the function body, intentionally.
 	// Do not move it to module scope — Vite can accidentally bundle module-scope
 	// process.env references into the client bundle.
-	const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
+	const secretKey = process.env.CLERK_SECRET_KEY
+	if (!secretKey) {
+		throw new Error('Missing required environment variable: CLERK_SECRET_KEY')
+	}
+	const clerk = createClerkClient({ secretKey })
 
 	const request = getRequest()
 	const auth = await clerk.authenticateRequest(request)
@@ -77,11 +81,21 @@ export async function syncUser(): Promise<User | null> {
 
 	const clerkUserId = auth.toAuth().userId
 
-	// Cookie fast-path: if db_synced matches the current Clerk user, the DB row
-	// already exists — skip the upsert entirely.
+	// Cookie fast-path: if db_synced matches the current Clerk user, check for
+	// the existing DB row and only skip the upsert when it is actually present.
 	const syncedId = getCookie('db_synced')
 	if (syncedId === clerkUserId) {
-		return prisma.user.findUnique({ where: { clerkId: clerkUserId } })
+		const existingUser = await prisma.user.findUnique({ where: { clerkId: clerkUserId } })
+		if (existingUser) {
+			return existingUser
+		}
+		// Stale cookie: clear it and fall through to the normal sync/upsert path.
+		setCookie('db_synced', '', {
+			httpOnly: true,
+			sameSite: 'lax',
+			maxAge: 0,
+			path: '/',
+		})
 	}
 
 	// No matching cookie — fetch full user details from Clerk and upsert.
@@ -93,7 +107,11 @@ export async function syncUser(): Promise<User | null> {
 			where: { clerkId: clerkUserId },
 			create: {
 				clerkId: clerkUserId,
-				email: clerkUser.emailAddresses[0].emailAddress,
+				email: (() => {
+					const addr = clerkUser.emailAddresses[0]?.emailAddress
+					if (!addr) throw new Error(`Clerk user ${clerkUserId} has no email address`)
+					return addr
+				})(),
 				username: await deriveUniqueUsername(clerkUser),
 				currentRating: 1000,
 			},
@@ -108,7 +126,9 @@ export async function syncUser(): Promise<User | null> {
 		// other request won the INSERT. Fall back to fetching the row that was created.
 		if (isPrismaUniqueConstraintError(e)) {
 			const existing = await prisma.user.findUnique({ where: { clerkId: clerkUserId } })
-			return existing
+			if (existing) {
+				return existing
+			}
 		}
 		throw e
 	}

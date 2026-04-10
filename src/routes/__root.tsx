@@ -20,7 +20,7 @@ import { createServerFn } from '@tanstack/react-start'
 import type { QueryClient } from '@tanstack/react-query'
 import type { User } from '@prisma/client'
 
-const syncUserFn = createServerFn({ method: 'GET' }).handler(async () => {
+const syncUserFn = createServerFn({ method: 'POST' }).handler(async () => {
   const { syncUser } = await import('../lib/sync-user')
   return syncUser()
 })
