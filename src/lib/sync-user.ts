@@ -93,6 +93,7 @@ export async function syncUser(): Promise<User | null> {
 		setCookie('db_synced', '', {
 			httpOnly: true,
 			sameSite: 'lax',
+			secure: process.env.NODE_ENV === 'production',
 			maxAge: 0,
 			path: '/',
 		})
@@ -137,6 +138,7 @@ export async function syncUser(): Promise<User | null> {
 	setCookie('db_synced', clerkUserId, {
 		httpOnly: true,
 		sameSite: 'lax',
+		secure: process.env.NODE_ENV === 'production',
 		maxAge: 3600,
 		path: '/',
 	})

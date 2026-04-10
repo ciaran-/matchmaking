@@ -31,12 +31,12 @@ interface MyRouterContext {
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
-  loader: async ({ context }) => {
+  beforeLoad: async () => {
     try {
-      context.dbUser = await syncUserFn()
+      return { dbUser: await syncUserFn() }
     } catch (e) {
       console.error('[syncUser] failed, continuing without DB user:', e)
-      context.dbUser = null
+      return { dbUser: null }
     }
   },
   head: () => ({
