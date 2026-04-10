@@ -28,6 +28,8 @@ npm run db:seed      # Seed the database with test data
 npm run db:reset     # Reset and re-run all migrations
 ```
 
+Migrations are run via the Prisma MCP server (see below) — this handles the interactive TTY requirement automatically.
+
 ## Architecture
 
 **TanStack Start** full-stack app (React meta-framework with SSR). Routes live in `src/routes/` and use file-based routing with TanStack Router — the `routeTree.gen.ts` file is auto-generated and should not be edited manually.
@@ -69,6 +71,18 @@ Server functions in route files are harder to unit test in isolation — test th
 For server-only modules (anything that uses Node APIs, Prisma, or TanStack Start server utilities), add `// @vitest-environment node` at the top of the test file to avoid jsdom overhead.
 
 When mocking with `vi.mock()`, mock at the module boundary — mock `@/db` to stub Prisma, mock the Clerk SDK package to stub auth, and mock `@tanstack/react-start/server` to stub request/response utilities.
+
+## Prisma MCP Server
+
+The Prisma MCP server is configured for this project and gives Claude Code direct access to `migrate-dev`, `migrate-reset`, and `migrate-status` without needing an interactive terminal.
+
+`.mcp.json` is in `.gitignore` — **do not commit it**. It contains a local `DATABASE_URL`. Each developer (and Claude Code instance) needs their own copy. To set it up:
+
+```bash
+claude mcp add --scope project prisma -- npx -y prisma@latest mcp
+```
+
+Then add your local `DATABASE_URL` to the `env` block in the generated `.mcp.json`.
 
 ## Path Aliases
 
