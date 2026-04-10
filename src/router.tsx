@@ -13,7 +13,7 @@ export const getRouter = () => {
 
   const router = createRouter({
     routeTree,
-    context: { ...rqContext },
+    context: { ...rqContext, dbUser: null },
     defaultPreload: 'intent',
     Wrap: (props: { children: React.ReactNode }) => {
       return (
@@ -26,12 +26,10 @@ export const getRouter = () => {
 
   setupRouterSsrQueryIntegration({ router, queryClient: rqContext.queryClient })
 
-  if (!router.isServer) {
-    Sentry.init({
-      dsn: import.meta.env.VITE_SENTRY_DSN,
-      integrations: [],
-    })
-  }
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    integrations: [],
+  })
 
   return router
 }

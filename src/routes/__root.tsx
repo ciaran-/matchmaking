@@ -16,13 +16,29 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 
 import appCss from '../styles.css?url'
 
+import { createServerFn } from '@tanstack/react-start'
 import type { QueryClient } from '@tanstack/react-query'
+import type { User } from '@prisma/client'
+
+const syncUserFn = createServerFn({ method: 'POST' }).handler(async () => {
+  const { syncUser } = await import('../lib/sync-user')
+  return syncUser()
+})
 
 interface MyRouterContext {
   queryClient: QueryClient
+  dbUser: User | null
 }
 
 export const Route = createRootRouteWithContext<MyRouterContext>()({
+  beforeLoad: async () => {
+    try {
+      return { dbUser: await syncUserFn() }
+    } catch (e) {
+      console.error('[syncUser] failed, continuing without DB user:', e)
+      return { dbUser: null }
+    }
+  },
   head: () => ({
     meta: [
       {

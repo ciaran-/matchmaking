@@ -12,6 +12,9 @@ count.txt
 .vinxi
 todos.json
 
+# MCP config — contains local DATABASE_URL, never commit
+.mcp.json
+
 # Local Netlify folder
 .netlify
 
