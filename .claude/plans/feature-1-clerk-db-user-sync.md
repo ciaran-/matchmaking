@@ -6,17 +6,24 @@ Clerk manages authentication (identity, sessions, OAuth). The PostgreSQL `User` 
 
 ---
 
-## Approach: Plain async function called from the root loader
+## Approach: Cookie-gated root loader sync
 
-On each full SSR page load, if a Clerk session is present, upsert a `User` row in the DB (using the Clerk `userId` as the link). This is idempotent — if the user already exists, nothing changes. If they're new, they get created. The result is placed in the router context so any route can access it without re-fetching.
+On each full SSR page load, the root loader checks for a short-lived `db_synced` cookie containing the current Clerk `userId`. If the cookie is present and matches the session, the upsert is skipped entirely — zero DB cost. If the cookie is absent or belongs to a different user (sign-out/sign-in), the upsert runs and the cookie is set. The result is placed in the router context so any route can access it without re-fetching.
 
 **Why a plain async function, not `createServerFn`?**
 `createServerFn` is an RPC primitive — calling it from a server-side loader makes an internal HTTP round-trip to itself. For logic that runs in the root loader, export a plain `async` function and call it directly. No performance penalty, no request context loss.
 
-**Why root loader over webhooks?**
-Webhooks require a publicly accessible URL and external setup — overkill at this stage. The root loader runs server-side before any child route renders and is the natural place to establish identity.
+**Why root loader with a cookie, over the alternatives?**
 
-**Known trade-off:** This adds a DB round-trip to every full-page SSR request, even for users already in the DB. For a small internal app this is acceptable. A future optimisation could skip the upsert if a short-lived cookie or `lastSyncedAt` timestamp indicates the user was recently synced.
+Three approaches were evaluated:
+
+- **Root loader (upsert on every request):** Correct and simple, but adds a DB SELECT on every full-page SSR load even for users already in the DB. Rejected on performance grounds.
+- **Webhooks (Clerk `user.created` event):** Zero per-request cost, but has a cold-start problem — between Clerk creating the user and the webhook firing, the DB row doesn't exist yet, so every server function still needs a null-handling fallback. Also requires ngrok/tunnel tooling for local development, a new `CLERK_WEBHOOK_SECRET`, a `svix` dependency, and manual Clerk dashboard configuration per environment. Too much operational overhead for an internal app.
+- **Lazy/on-demand sync (`getOrCreateDbUser` called per server function):** Only pays the DB cost when a route actually needs the user. But creates a silent omission hazard — any future server function touching user-specific data must remember to call the helper. No centralised guarantee, error handling is per-call-site, and `dbUser` isn't available in context for layout-level use. Savings are theoretical for this app since `/league` already does a heavy `findMany`.
+
+The cookie-gated root loader combines the correctness of the root loader (always synced, always in context, centralised error handling) with near-zero steady-state cost. Since the `update` block is intentionally empty (nothing is overwritten after creation), the upsert after first-visit is only a SELECT to confirm row existence — the cookie eliminates even that.
+
+**Cookie spec:** `db_synced`, `httpOnly`, `sameSite=lax`, `maxAge=3600` (1 hour). Contains the Clerk `userId`. On sign-out, the cookie is cleared by Clerk's session invalidation; on next sign-in with a different account the userId won't match and the upsert runs for the new user.
 
 ---
 
@@ -76,10 +83,21 @@ export async function syncUser(): Promise<User | null> {
 
   if (!auth.isSignedIn) return null
 
-  const clerkUser = await clerk.users.getUser(auth.toAuth().userId)
+  const clerkUserId = auth.toAuth().userId
 
+  // Check the short-lived sync cookie — if it matches the current Clerk user,
+  // the DB row already exists and we can skip the upsert entirely.
+  const cookies = parseCookies(request.headers.get('cookie') ?? '')
+  if (cookies.db_synced === clerkUserId) {
+    return prisma.user.findUnique({ where: { clerkId: clerkUserId } })
+  }
+
+  // Cookie absent or belongs to a different user — run the upsert.
+  const clerkUser = await clerk.users.getUser(clerkUserId)
+
+  let dbUser: User
   try {
-    return await prisma.user.upsert({
+    dbUser = await prisma.user.upsert({
       where: { clerkId: clerkUser.id },
       create: {
         clerkId: clerkUser.id,
@@ -97,10 +115,20 @@ export async function syncUser(): Promise<User | null> {
     // P2002 = unique constraint violation from a race condition (two tabs/devices
     // signing in simultaneously). Fall back to fetching the row that won the race.
     if (isPrismaUniqueConstraintError(e)) {
-      return prisma.user.findUnique({ where: { clerkId: clerkUser.id } })
+      return prisma.user.findUnique({ where: { clerkId: clerkUserId } })
     }
     throw e
   }
+
+  // Set the sync cookie so subsequent page loads skip the upsert.
+  // The response headers must be set on the outgoing response — in TanStack Start
+  // this is done via setHeader() from the server request context.
+  setResponseHeader(
+    'Set-Cookie',
+    `db_synced=${clerkUserId}; HttpOnly; SameSite=Lax; Max-Age=3600; Path=/`
+  )
+
+  return dbUser
 }
 ```
 
@@ -169,7 +197,9 @@ At this stage, nothing in the UI reads `dbUser` — the `Header` uses Clerk's ow
 2. Start dev server: `npm run dev`
 3. Sign in via Clerk
 4. Open Prisma Studio (`npm run db:studio`) — confirm a new `User` row exists with your `clerkId`, `email`, and derived `username`; `currentRating` should be 1000
-5. Sign out and sign back in — confirm no duplicate row is created (row count stays the same)
-6. Visit `/league` — existing seed users (with `clerkId = null`) still appear; your newly synced user also appears with rating 1000
-7. Kill the DB while the dev server is running, reload a page — app should degrade gracefully (Clerk auth still works, no crash, error logged to console)
-8. Restore the DB — next page load re-syncs cleanly
+5. In browser DevTools (Application → Cookies), confirm a `db_synced` cookie is set with your Clerk `userId` as the value
+6. Reload the page — confirm in server logs / Prisma query logs that no upsert fires (cookie is present; only a `findUnique` runs)
+7. Sign out and sign back in — confirm no duplicate row is created (row count stays the same); confirm the cookie is cleared on sign-out and re-set on sign-in
+8. Visit `/league` — existing seed users (with `clerkId = null`) still appear; your newly synced user also appears with rating 1000
+9. Kill the DB while the dev server is running, reload a page — app should degrade gracefully (Clerk auth still works, no crash, error logged to console)
+10. Restore the DB — next page load re-syncs cleanly

@@ -58,6 +58,18 @@ const myFn = createServerFn({ method: "GET" }).handler(async () => {
 
 Error collection is automatic via `src/router.tsx` — no manual setup needed for errors.
 
+## Testing
+
+Tests are written with Vitest and live alongside their source file (`foo.test.ts` next to `foo.ts`).
+
+Every new function in `src/lib/` must have a corresponding test file. This is the primary place business logic lives and it must be covered.
+
+Server functions in route files are harder to unit test in isolation — test the underlying `src/lib/` functions they call instead. The route-level wiring is verified manually.
+
+For server-only modules (anything that uses Node APIs, Prisma, or TanStack Start server utilities), add `// @vitest-environment node` at the top of the test file to avoid jsdom overhead.
+
+When mocking with `vi.mock()`, mock at the module boundary — mock `@/db` to stub Prisma, mock the Clerk SDK package to stub auth, and mock `@tanstack/react-start/server` to stub request/response utilities.
+
 ## Path Aliases
 
 `@/*` maps to `./src/*` (configured in `tsconfig.json`).
