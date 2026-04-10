@@ -173,6 +173,7 @@ describe('deriveUniqueUsername', () => {
 describe('syncUser', () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		process.env.CLERK_SECRET_KEY = 'test_secret_key'
 		mockGetRequest.mockReturnValue(new Request('http://localhost/'))
 	})
 
