@@ -7,9 +7,6 @@ import ClerkHeader from '../integrations/clerk/header-user.tsx';
 export default function Header() {
 	const { isSignedIn } = useUser();
 	const [isOpen, setIsOpen] = useState(false);
-	const [groupedExpanded, setGroupedExpanded] = useState<
-		Record<string, boolean>
-	>({});
 
 	return (
 		<>

@@ -76,7 +76,9 @@ export async function syncUser(): Promise<User | null> {
 	}
 	const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
 	if (!publishableKey) {
-		throw new Error('Missing required environment variable: VITE_CLERK_PUBLISHABLE_KEY');
+		throw new Error(
+			'Missing required environment variable: VITE_CLERK_PUBLISHABLE_KEY',
+		);
 	}
 	const clerk = createClerkClient({ secretKey, publishableKey });
 
