@@ -118,6 +118,20 @@ describe('Default rating', () => {
 		expect(result.auditTrail[0].ratingBeforeA).toBe(1000);
 		expect(result.auditTrail[0].ratingBeforeB).toBe(1000);
 	});
+
+	it('Unknown player carries their updated rating into subsequent games', () => {
+		// bob is absent from startingRatings — defaults to 1000 and wins game 1
+		// game 2 must use bob's post-game-1 rating, not reset to 1000
+		const result = processGameSeries({ alice: 1000 }, [
+			{ playerA: 'alice', playerB: 'bob', result: 'B' },
+			{ playerA: 'carol', playerB: 'bob', result: 'A' },
+		]);
+
+		expect(result.auditTrail[1].ratingBeforeB).toBe(
+			result.auditTrail[0].ratingAfterB,
+		);
+		expect(result.auditTrail[1].ratingBeforeB).toBe(1016);
+	});
 });
 
 describe('Edge cases', () => {
@@ -144,6 +158,19 @@ describe('Edge cases', () => {
 		const entry = result.auditTrail[0];
 		expect(entry.changeA).toBe(8);
 		expect(entry.changeB).toBe(-8);
+	});
+
+	it('kFactor is scoped to the game it is set on', () => {
+		const result = processGameSeries(
+			{ alice: 1000, bob: 1000, carol: 1000, dave: 1000 },
+			[
+				{ playerA: 'alice', playerB: 'bob', result: 'A', kFactor: 16 },
+				{ playerA: 'carol', playerB: 'dave', result: 'A' },
+			],
+		);
+
+		expect(result.auditTrail[0].changeA).toBe(8); // kFactor: 16
+		expect(result.auditTrail[1].changeA).toBe(16); // default K_FACTOR: 32
 	});
 
 	it('playerA === playerB throws', () => {
