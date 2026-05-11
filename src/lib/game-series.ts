@@ -1,10 +1,11 @@
+import type { User } from '@prisma/client';
 import { calculateElo1v1, type EloResult, K_FACTOR } from './elo';
 
 export const DEFAULT_RATING = 1000;
 
 export interface GameSeriesInput {
-	playerA: string;
-	playerB: string;
+	playerA: User['id'];
+	playerB: User['id'];
 	result: EloResult;
 	kFactor?: number;
 }
@@ -15,8 +16,8 @@ export interface ProcessSeriesOptions {
 
 export interface GameAuditEntry {
 	index: number;
-	playerA: string;
-	playerB: string;
+	playerA: User['id'];
+	playerB: User['id'];
 	result: EloResult;
 	ratingBeforeA: number;
 	ratingBeforeB: number;
@@ -28,11 +29,11 @@ export interface GameAuditEntry {
 
 export interface GameSeriesResult {
 	auditTrail: GameAuditEntry[];
-	finalRatings: Record<string, number>;
+	finalRatings: Record<User['id'], number>;
 }
 
 export function processGameSeries(
-	startingRatings: Record<string, number>,
+	startingRatings: Record<User['id'], number>,
 	games: GameSeriesInput[],
 	options?: ProcessSeriesOptions,
 ): GameSeriesResult {
