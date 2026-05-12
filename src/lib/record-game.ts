@@ -30,7 +30,6 @@ export async function recordGame(
 		const users = await prisma.user.findMany({
 			where: { id: { in: [playerAId, playerBId] } },
 		});
-		if (users.length < 2) throw new Error('One or both players not found');
 
 		const userA = users.find((u) => u.id === playerAId);
 		const userB = users.find((u) => u.id === playerBId);
