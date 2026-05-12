@@ -50,6 +50,31 @@ beforeEach(() => {
 	);
 });
 
+// ---------- Helpers ----------
+
+type Participant = {
+	userId: string;
+	team: string;
+	ratingBefore: number;
+	ratingAfter: number;
+	ratingChange: number;
+};
+
+type CreateData = {
+	mode: string;
+	teamAScore: number;
+	teamBScore: number;
+	participants: { create: Participant[] };
+};
+
+function getCreateData(): CreateData {
+	return (mockCreate.mock.calls[0][0] as { data: CreateData }).data;
+}
+
+function getParticipants(): Participant[] {
+	return getCreateData().participants.create;
+}
+
 // ---------- Tests ----------
 
 describe('recordGame', () => {
@@ -62,16 +87,10 @@ describe('recordGame', () => {
 
 		expect(mockTransaction).toHaveBeenCalledOnce();
 
-		const createArg = mockCreate.mock.calls[0][0];
-		expect((createArg as { data: { mode: string } }).data.mode).toBe(
-			'ONE_VS_ONE',
-		);
-		expect(
-			(createArg as { data: { teamAScore: number } }).data.teamAScore,
-		).toBe(1);
-		expect(
-			(createArg as { data: { teamBScore: number } }).data.teamBScore,
-		).toBe(0);
+		const data = getCreateData();
+		expect(data.mode).toBe('ONE_VS_ONE');
+		expect(data.teamAScore).toBe(1);
+		expect(data.teamBScore).toBe(0);
 
 		expect(result.ratingChangeA).toBeGreaterThan(0);
 		expect(result.ratingChangeB).toBeLessThan(0);
@@ -93,11 +112,9 @@ describe('recordGame', () => {
 			result: 'B',
 		});
 
-		const createArg = mockCreate.mock.calls[0][0] as {
-			data: { teamAScore: number; teamBScore: number };
-		};
-		expect(createArg.data.teamAScore).toBe(0);
-		expect(createArg.data.teamBScore).toBe(1);
+		const data = getCreateData();
+		expect(data.teamAScore).toBe(0);
+		expect(data.teamBScore).toBe(1);
 
 		expect(result.ratingChangeA).toBeLessThan(0);
 		expect(result.ratingChangeB).toBeGreaterThan(0);
@@ -110,11 +127,9 @@ describe('recordGame', () => {
 			result: 'draw',
 		});
 
-		const createArg = mockCreate.mock.calls[0][0] as {
-			data: { teamAScore: number; teamBScore: number };
-		};
-		expect(createArg.data.teamAScore).toBe(0);
-		expect(createArg.data.teamBScore).toBe(0);
+		const data = getCreateData();
+		expect(data.teamAScore).toBe(0);
+		expect(data.teamBScore).toBe(0);
 
 		expect(result.ratingChangeA).toBe(0);
 		expect(result.ratingChangeB).toBe(0);
@@ -176,22 +191,13 @@ describe('recordGame', () => {
 			result: 'A',
 		});
 
-		const createArg = mockCreate.mock.calls[0][0];
-		const participants: Array<{
-			userId: string;
-			team: string;
-			ratingBefore: number;
-			ratingAfter: number;
-			ratingChange: number;
-		}> = (
-			createArg as { data: { participants: { create: typeof participants } } }
-		).data.participants.create;
-
-		const participantA = participants.find((p) => p.userId === 'player-a');
-		const participantB = participants.find((p) => p.userId === 'player-b');
-
-		expect(participantA?.ratingBefore).toBe(1200);
-		expect(participantB?.ratingBefore).toBe(800);
+		const participants = getParticipants();
+		expect(
+			participants.find((p) => p.userId === 'player-a')?.ratingBefore,
+		).toBe(1200);
+		expect(
+			participants.find((p) => p.userId === 'player-b')?.ratingBefore,
+		).toBe(800);
 	});
 
 	it('ratingAfter consistency (ratingAfter = ratingBefore + ratingChange)', async () => {
@@ -201,21 +207,8 @@ describe('recordGame', () => {
 			result: 'A',
 		});
 
-		const createArg = mockCreate.mock.calls[0][0];
-		const participants: Array<{
-			userId: string;
-			team: string;
-			ratingBefore: number;
-			ratingAfter: number;
-			ratingChange: number;
-		}> = (
-			createArg as { data: { participants: { create: typeof participants } } }
-		).data.participants.create;
-
-		for (const participant of participants) {
-			expect(participant.ratingAfter).toBe(
-				participant.ratingBefore + participant.ratingChange,
-			);
+		for (const p of getParticipants()) {
+			expect(p.ratingAfter).toBe(p.ratingBefore + p.ratingChange);
 		}
 	});
 
@@ -226,21 +219,8 @@ describe('recordGame', () => {
 			result: 'A',
 		});
 
-		const createArg = mockCreate.mock.calls[0][0];
-		const participants: Array<{
-			userId: string;
-			team: string;
-			ratingBefore: number;
-			ratingAfter: number;
-			ratingChange: number;
-		}> = (
-			createArg as { data: { participants: { create: typeof participants } } }
-		).data.participants.create;
-
-		const participantA = participants.find((p) => p.userId === 'player-a');
-		const participantB = participants.find((p) => p.userId === 'player-b');
-
-		expect(participantA?.team).toBe('A');
-		expect(participantB?.team).toBe('B');
+		const participants = getParticipants();
+		expect(participants.find((p) => p.userId === 'player-a')?.team).toBe('A');
+		expect(participants.find((p) => p.userId === 'player-b')?.team).toBe('B');
 	});
 });
