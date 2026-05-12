@@ -202,7 +202,10 @@ function LeagueTable() {
 									<select
 										id={playerASelectId}
 										value={playerAId}
-										onChange={(e) => setPlayerAId(e.target.value)}
+										onChange={(e) => {
+											setPlayerAId(e.target.value);
+											if (e.target.value === playerBId) setPlayerBId('');
+										}}
 										className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
 									>
 										<option value="">Select a player…</option>
