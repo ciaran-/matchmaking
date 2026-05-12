@@ -113,16 +113,14 @@ function LeagueTable() {
 			</section>
 
 			<section className="py-16 px-6 max-w-7xl mx-auto flex flex-col items-center">
-				{isSignedIn && (
-					<button
-						type="button"
-						onClick={() => setModalOpen(true)}
-						className="mb-8 flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-lg"
-					>
-						<PlusCircle className="w-5 h-5" />
-						Record Game
-					</button>
-				)}
+				<button
+					type="button"
+					onClick={() => setModalOpen(true)}
+					className="mb-8 flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-lg"
+				>
+					<PlusCircle className="w-5 h-5" />
+					Record Game
+				</button>
 				<table>
 					<thead>
 						<tr className="border border-white bg-teal-600">
@@ -166,19 +164,13 @@ function LeagueTable() {
 			</section>
 
 			{modalOpen && (
-				<div
-					role="dialog"
-					aria-modal="true"
-					aria-label="Record Game Result"
-					className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-					onClick={() => setModalOpen(false)}
-					onKeyDown={(e) => e.key === 'Escape' && setModalOpen(false)}
-				>
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
 					<div
-						role="document"
+						role="dialog"
+						aria-modal="true"
+						aria-label="Record Game Result"
 						className="w-full max-w-md mx-4"
-						onClick={(e) => e.stopPropagation()}
-						onKeyDown={(e) => e.stopPropagation()}
+						onKeyDown={(e) => e.key === 'Escape' && setModalOpen(false)}
 					>
 						<Dialog
 							title="Record Game Result"
