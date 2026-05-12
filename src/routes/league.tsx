@@ -2,6 +2,7 @@ import { useUser } from '@clerk/clerk-react';
 import { createFileRoute } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { prisma } from '@/db';
+import type { EloResult } from '@/lib/elo';
 
 const getLeaguePlaces = createServerFn({
 	method: 'GET',
@@ -13,6 +14,26 @@ const getLeaguePlaces = createServerFn({
 			})
 		: []);
 });
+
+export const recordGameFn = createServerFn({ method: 'POST' })
+	.inputValidator(
+		(data: { playerAId: string; playerBId: string; result: EloResult }) => data,
+	)
+	.handler(async ({ data }) => {
+		const secretKey = process.env.CLERK_SECRET_KEY;
+		const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
+		if (!secretKey || !publishableKey)
+			throw new Error('Missing Clerk env vars');
+
+		const { createClerkClient } = await import('@clerk/backend');
+		const { getRequest } = await import('@tanstack/react-start/server');
+		const clerk = createClerkClient({ secretKey, publishableKey });
+		const auth = await clerk.authenticateRequest(getRequest());
+		if (!auth.isSignedIn) throw new Error('Unauthorized');
+
+		const { recordGame } = await import('../lib/record-game');
+		return recordGame(data);
+	});
 
 export const Route = createFileRoute('/league')({
 	ssr: 'data-only',
