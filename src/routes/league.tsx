@@ -1,6 +1,11 @@
 import { useUser } from '@clerk/clerk-react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { PlusCircle } from 'lucide-react';
+import { useId, useState } from 'react';
+import { Button } from '@/components/storybook/button';
+import { Dialog } from '@/components/storybook/dialog';
+import { RadioGroup } from '@/components/storybook/radio-group';
 import { prisma } from '@/db';
 import type { EloResult } from '@/lib/elo';
 
@@ -44,6 +49,40 @@ export const Route = createFileRoute('/league')({
 function LeagueTable() {
 	const { isSignedIn, isLoaded } = useUser();
 	const leaguePlaces = Route.useLoaderData();
+	const router = useRouter();
+	const playerASelectId = useId();
+	const playerBSelectId = useId();
+	const [modalOpen, setModalOpen] = useState(false);
+	const [playerAId, setPlayerAId] = useState('');
+	const [playerBId, setPlayerBId] = useState('');
+	const [result, setResult] = useState<EloResult>('A');
+	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	const playerAUsername = leaguePlaces.find(
+		(p) => p.id === playerAId,
+	)?.username;
+	const playerBUsername = leaguePlaces.find(
+		(p) => p.id === playerBId,
+	)?.username;
+
+	async function handleSubmit() {
+		if (!playerAId || !playerBId) return;
+		setSubmitting(true);
+		setError(null);
+		try {
+			await recordGameFn({ data: { playerAId, playerBId, result } });
+			setModalOpen(false);
+			setPlayerAId('');
+			setPlayerBId('');
+			setResult('A');
+			router.invalidate();
+		} catch (e) {
+			setError((e as { message?: string }).message ?? 'Failed to record game');
+		} finally {
+			setSubmitting(false);
+		}
+	}
 
 	if (!isLoaded) {
 		return <div className="p-4">Loading...</div>;
@@ -74,6 +113,16 @@ function LeagueTable() {
 			</section>
 
 			<section className="py-16 px-6 max-w-7xl mx-auto flex flex-col items-center">
+				{isSignedIn && (
+					<button
+						type="button"
+						onClick={() => setModalOpen(true)}
+						className="mb-8 flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-lg"
+					>
+						<PlusCircle className="w-5 h-5" />
+						Record Game
+					</button>
+				)}
 				<table>
 					<thead>
 						<tr className="border border-white bg-teal-600">
@@ -115,6 +164,112 @@ function LeagueTable() {
 					</tbody>
 				</table>
 			</section>
+
+			{modalOpen && (
+				<div
+					role="dialog"
+					aria-modal="true"
+					aria-label="Record Game Result"
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+					onClick={() => setModalOpen(false)}
+					onKeyDown={(e) => e.key === 'Escape' && setModalOpen(false)}
+				>
+					<div
+						role="document"
+						className="w-full max-w-md mx-4"
+						onClick={(e) => e.stopPropagation()}
+						onKeyDown={(e) => e.stopPropagation()}
+					>
+						<Dialog
+							title="Record Game Result"
+							footer={
+								<div className="flex justify-end gap-3">
+									<Button
+										variant="secondary"
+										onClick={() => setModalOpen(false)}
+									>
+										Cancel
+									</Button>
+									<Button
+										disabled={!playerAId || !playerBId || submitting}
+										onClick={handleSubmit}
+									>
+										{submitting ? 'Saving…' : 'Record Result'}
+									</Button>
+								</div>
+							}
+						>
+							<div className="flex flex-col gap-5">
+								<div className="flex flex-col gap-1.5">
+									<label
+										htmlFor={playerASelectId}
+										className="text-sm font-medium text-gray-700 dark:text-gray-200"
+									>
+										Player A
+									</label>
+									<select
+										id={playerASelectId}
+										value={playerAId}
+										onChange={(e) => setPlayerAId(e.target.value)}
+										className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
+									>
+										<option value="">Select a player…</option>
+										{leaguePlaces.map((p) => (
+											<option key={p.id} value={p.id}>
+												{p.username}
+											</option>
+										))}
+									</select>
+								</div>
+
+								<div className="flex flex-col gap-1.5">
+									<label
+										htmlFor={playerBSelectId}
+										className="text-sm font-medium text-gray-700 dark:text-gray-200"
+									>
+										Player B
+									</label>
+									<select
+										id={playerBSelectId}
+										value={playerBId}
+										onChange={(e) => setPlayerBId(e.target.value)}
+										className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
+									>
+										<option value="">Select a player…</option>
+										{leaguePlaces
+											.filter((p) => p.id !== playerAId)
+											.map((p) => (
+												<option key={p.id} value={p.id}>
+													{p.username}
+												</option>
+											))}
+									</select>
+								</div>
+
+								<RadioGroup
+									label="Result"
+									name="result"
+									value={result}
+									onChange={(v) => setResult(v as EloResult)}
+									options={[
+										{
+											value: 'A',
+											label: `${playerAUsername ?? 'Player A'} won`,
+										},
+										{ value: 'draw', label: 'Draw' },
+										{
+											value: 'B',
+											label: `${playerBUsername ?? 'Player B'} won`,
+										},
+									]}
+								/>
+
+								{error && <p className="text-red-400 text-sm">{error}</p>}
+							</div>
+						</Dialog>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
