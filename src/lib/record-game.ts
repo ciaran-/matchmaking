@@ -36,19 +36,8 @@ export async function recordGame(
 
 		if (!userA || !userB) throw new Error('One or both players not found');
 
-		let teamAScore: number;
-		let teamBScore: number;
-
-		if (result === 'A') {
-			teamAScore = 1;
-			teamBScore = 0;
-		} else if (result === 'B') {
-			teamAScore = 0;
-			teamBScore = 1;
-		} else {
-			teamAScore = 0;
-			teamBScore = 0;
-		}
+		const scores = { A: [1, 0], B: [0, 1], draw: [0, 0] } as const;
+		const [teamAScore, teamBScore] = scores[result];
 
 		const { changeA, changeB } = calculateElo1v1(
 			userA.currentRating,
