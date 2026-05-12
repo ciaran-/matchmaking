@@ -212,6 +212,28 @@ describe('recordGame', () => {
 		}
 	});
 
+	it('user.update currentRating matches participant ratingAfter', async () => {
+		await recordGame({
+			playerAId: 'player-a',
+			playerBId: 'player-b',
+			result: 'A',
+		});
+
+		const participants = getParticipants();
+		const updates = mockUpdate.mock.calls.map((call) => {
+			const arg = call[0] as {
+				where: { id: string };
+				data: { currentRating: number };
+			};
+			return { id: arg.where.id, currentRating: arg.data.currentRating };
+		});
+
+		for (const participant of participants) {
+			const update = updates.find((u) => u.id === participant.userId);
+			expect(update?.currentRating).toBe(participant.ratingAfter);
+		}
+	});
+
 	it('Team assignment', async () => {
 		await recordGame({
 			playerAId: 'player-a',
