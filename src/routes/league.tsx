@@ -1,7 +1,13 @@
 import { useUser } from '@clerk/clerk-react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { PlusCircle } from 'lucide-react';
+import { useId, useState } from 'react';
+import { Button } from '@/components/storybook/button';
+import { Dialog } from '@/components/storybook/dialog';
+import { RadioGroup } from '@/components/storybook/radio-group';
 import { prisma } from '@/db';
+import type { EloResult } from '@/lib/elo';
 
 const getLeaguePlaces = createServerFn({
 	method: 'GET',
@@ -14,15 +20,175 @@ const getLeaguePlaces = createServerFn({
 		: []);
 });
 
+export const recordGameFn = createServerFn({ method: 'POST' })
+	.inputValidator(
+		(data: { playerAId: string; playerBId: string; result: EloResult }) => data,
+	)
+	.handler(async ({ data }) => {
+		const secretKey = process.env.CLERK_SECRET_KEY;
+		const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
+		if (!secretKey || !publishableKey)
+			throw new Error('Missing Clerk env vars');
+
+		const { createClerkClient } = await import('@clerk/backend');
+		const { getRequest } = await import('@tanstack/react-start/server');
+		const clerk = createClerkClient({ secretKey, publishableKey });
+		// Pass a headers-only clone — the original request body is already consumed
+		// by TanStack Start to deserialize the server function arguments.
+		const req = getRequest();
+		const auth = await clerk.authenticateRequest(
+			new Request(req.url, { headers: req.headers }),
+		);
+		if (!auth.isSignedIn) throw new Error('Unauthorized');
+
+		const { recordGame } = await import('../lib/record-game');
+		return recordGame(data);
+	});
+
 export const Route = createFileRoute('/league')({
 	ssr: 'data-only',
 	component: LeagueTable,
 	loader: async () => await getLeaguePlaces(),
 });
 
+type Player = { id: string; username: string };
+
+interface RecordGameModalProps {
+	players: Player[];
+	onClose: () => void;
+	onSuccess: () => void;
+}
+
+function RecordGameModal({
+	players,
+	onClose,
+	onSuccess,
+}: RecordGameModalProps) {
+	const playerASelectId = useId();
+	const playerBSelectId = useId();
+	const [playerAId, setPlayerAId] = useState('');
+	const [playerBId, setPlayerBId] = useState('');
+	const [result, setResult] = useState<EloResult>('A');
+	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	const playerAUsername = players.find((p) => p.id === playerAId)?.username;
+	const playerBUsername = players.find((p) => p.id === playerBId)?.username;
+
+	async function handleSubmit() {
+		if (!playerAId || !playerBId) return;
+		setSubmitting(true);
+		setError(null);
+		try {
+			await recordGameFn({ data: { playerAId, playerBId, result } });
+			onSuccess();
+		} catch (e) {
+			setError((e as { message?: string }).message ?? 'Failed to record game');
+		} finally {
+			setSubmitting(false);
+		}
+	}
+
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-label="Record Game Result"
+				className="w-full max-w-md mx-4"
+				onKeyDown={(e) => e.key === 'Escape' && onClose()}
+			>
+				<Dialog
+					title="Record Game Result"
+					footer={
+						<div className="flex justify-end gap-3">
+							<Button variant="secondary" onClick={onClose}>
+								Cancel
+							</Button>
+							<Button
+								disabled={!playerAId || !playerBId || submitting}
+								onClick={handleSubmit}
+							>
+								{submitting ? 'Saving…' : 'Record Result'}
+							</Button>
+						</div>
+					}
+				>
+					<div className="flex flex-col gap-5">
+						<div className="flex flex-col gap-1.5">
+							<label
+								htmlFor={playerASelectId}
+								className="text-sm font-medium text-gray-700 dark:text-gray-200"
+							>
+								Player A
+							</label>
+							<select
+								id={playerASelectId}
+								value={playerAId}
+								onChange={(e) => {
+									setPlayerAId(e.target.value);
+									if (e.target.value === playerBId) setPlayerBId('');
+								}}
+								className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
+							>
+								<option value="">Select a player…</option>
+								{players.map((p) => (
+									<option key={p.id} value={p.id}>
+										{p.username}
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<label
+								htmlFor={playerBSelectId}
+								className="text-sm font-medium text-gray-700 dark:text-gray-200"
+							>
+								Player B
+							</label>
+							<select
+								id={playerBSelectId}
+								value={playerBId}
+								onChange={(e) => setPlayerBId(e.target.value)}
+								className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
+							>
+								<option value="">Select a player…</option>
+								{players
+									.filter((p) => p.id !== playerAId)
+									.map((p) => (
+										<option key={p.id} value={p.id}>
+											{p.username}
+										</option>
+									))}
+							</select>
+						</div>
+
+						<RadioGroup
+							label="Result"
+							name="result"
+							value={result}
+							onChange={(v) => setResult(v as EloResult)}
+							options={[
+								{ value: 'A', label: `${playerAUsername ?? 'Player A'} won` },
+								{ value: 'draw', label: 'Draw' },
+								{ value: 'B', label: `${playerBUsername ?? 'Player B'} won` },
+							]}
+						/>
+
+						{error && <p className="text-red-400 text-sm">{error}</p>}
+					</div>
+				</Dialog>
+			</div>
+		</div>
+	);
+}
+
 function LeagueTable() {
 	const { isSignedIn, isLoaded } = useUser();
 	const leaguePlaces = Route.useLoaderData();
+	const router = useRouter();
+	const [modalOpen, setModalOpen] = useState(false);
 
 	if (!isLoaded) {
 		return <div className="p-4">Loading...</div>;
@@ -31,6 +197,7 @@ function LeagueTable() {
 	if (!isSignedIn) {
 		return <div className="p-4">Sign in to view this page</div>;
 	}
+
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
 			<section className="relative py-20 px-6 text-center overflow-hidden">
@@ -53,6 +220,14 @@ function LeagueTable() {
 			</section>
 
 			<section className="py-16 px-6 max-w-7xl mx-auto flex flex-col items-center">
+				<button
+					type="button"
+					onClick={() => setModalOpen(true)}
+					className="mb-8 flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-lg"
+				>
+					<PlusCircle className="w-5 h-5" />
+					Record Game
+				</button>
 				<table>
 					<thead>
 						<tr className="border border-white bg-teal-600">
@@ -94,6 +269,17 @@ function LeagueTable() {
 					</tbody>
 				</table>
 			</section>
+
+			{modalOpen && (
+				<RecordGameModal
+					players={leaguePlaces}
+					onClose={() => setModalOpen(false)}
+					onSuccess={() => {
+						setModalOpen(false);
+						router.invalidate();
+					}}
+				/>
+			)}
 		</div>
 	);
 }
