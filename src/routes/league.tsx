@@ -51,25 +51,29 @@ export const Route = createFileRoute('/league')({
 	loader: async () => await getLeaguePlaces(),
 });
 
-function LeagueTable() {
-	const { isSignedIn, isLoaded } = useUser();
-	const leaguePlaces = Route.useLoaderData();
-	const router = useRouter();
+type Player = { id: string; username: string };
+
+interface RecordGameModalProps {
+	players: Player[];
+	onClose: () => void;
+	onSuccess: () => void;
+}
+
+function RecordGameModal({
+	players,
+	onClose,
+	onSuccess,
+}: RecordGameModalProps) {
 	const playerASelectId = useId();
 	const playerBSelectId = useId();
-	const [modalOpen, setModalOpen] = useState(false);
 	const [playerAId, setPlayerAId] = useState('');
 	const [playerBId, setPlayerBId] = useState('');
 	const [result, setResult] = useState<EloResult>('A');
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const playerAUsername = leaguePlaces.find(
-		(p) => p.id === playerAId,
-	)?.username;
-	const playerBUsername = leaguePlaces.find(
-		(p) => p.id === playerBId,
-	)?.username;
+	const playerAUsername = players.find((p) => p.id === playerAId)?.username;
+	const playerBUsername = players.find((p) => p.id === playerBId)?.username;
 
 	async function handleSubmit() {
 		if (!playerAId || !playerBId) return;
@@ -77,17 +81,114 @@ function LeagueTable() {
 		setError(null);
 		try {
 			await recordGameFn({ data: { playerAId, playerBId, result } });
-			setModalOpen(false);
-			setPlayerAId('');
-			setPlayerBId('');
-			setResult('A');
-			router.invalidate();
+			onSuccess();
 		} catch (e) {
 			setError((e as { message?: string }).message ?? 'Failed to record game');
 		} finally {
 			setSubmitting(false);
 		}
 	}
+
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-label="Record Game Result"
+				className="w-full max-w-md mx-4"
+				onKeyDown={(e) => e.key === 'Escape' && onClose()}
+			>
+				<Dialog
+					title="Record Game Result"
+					footer={
+						<div className="flex justify-end gap-3">
+							<Button variant="secondary" onClick={onClose}>
+								Cancel
+							</Button>
+							<Button
+								disabled={!playerAId || !playerBId || submitting}
+								onClick={handleSubmit}
+							>
+								{submitting ? 'Saving…' : 'Record Result'}
+							</Button>
+						</div>
+					}
+				>
+					<div className="flex flex-col gap-5">
+						<div className="flex flex-col gap-1.5">
+							<label
+								htmlFor={playerASelectId}
+								className="text-sm font-medium text-gray-700 dark:text-gray-200"
+							>
+								Player A
+							</label>
+							<select
+								id={playerASelectId}
+								value={playerAId}
+								onChange={(e) => {
+									setPlayerAId(e.target.value);
+									if (e.target.value === playerBId) setPlayerBId('');
+								}}
+								className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
+							>
+								<option value="">Select a player…</option>
+								{players.map((p) => (
+									<option key={p.id} value={p.id}>
+										{p.username}
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<label
+								htmlFor={playerBSelectId}
+								className="text-sm font-medium text-gray-700 dark:text-gray-200"
+							>
+								Player B
+							</label>
+							<select
+								id={playerBSelectId}
+								value={playerBId}
+								onChange={(e) => setPlayerBId(e.target.value)}
+								className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
+							>
+								<option value="">Select a player…</option>
+								{players
+									.filter((p) => p.id !== playerAId)
+									.map((p) => (
+										<option key={p.id} value={p.id}>
+											{p.username}
+										</option>
+									))}
+							</select>
+						</div>
+
+						<RadioGroup
+							label="Result"
+							name="result"
+							value={result}
+							onChange={(v) => setResult(v as EloResult)}
+							options={[
+								{ value: 'A', label: `${playerAUsername ?? 'Player A'} won` },
+								{ value: 'draw', label: 'Draw' },
+								{ value: 'B', label: `${playerBUsername ?? 'Player B'} won` },
+							]}
+						/>
+
+						{error && <p className="text-red-400 text-sm">{error}</p>}
+					</div>
+				</Dialog>
+			</div>
+		</div>
+	);
+}
+
+function LeagueTable() {
+	const { isSignedIn, isLoaded } = useUser();
+	const leaguePlaces = Route.useLoaderData();
+	const router = useRouter();
+	const [modalOpen, setModalOpen] = useState(false);
 
 	if (!isLoaded) {
 		return <div className="p-4">Loading...</div>;
@@ -96,6 +197,7 @@ function LeagueTable() {
 	if (!isSignedIn) {
 		return <div className="p-4">Sign in to view this page</div>;
 	}
+
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
 			<section className="relative py-20 px-6 text-center overflow-hidden">
@@ -169,106 +271,14 @@ function LeagueTable() {
 			</section>
 
 			{modalOpen && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-					<div
-						role="dialog"
-						aria-modal="true"
-						aria-label="Record Game Result"
-						className="w-full max-w-md mx-4"
-						onKeyDown={(e) => e.key === 'Escape' && setModalOpen(false)}
-					>
-						<Dialog
-							title="Record Game Result"
-							footer={
-								<div className="flex justify-end gap-3">
-									<Button
-										variant="secondary"
-										onClick={() => setModalOpen(false)}
-									>
-										Cancel
-									</Button>
-									<Button
-										disabled={!playerAId || !playerBId || submitting}
-										onClick={handleSubmit}
-									>
-										{submitting ? 'Saving…' : 'Record Result'}
-									</Button>
-								</div>
-							}
-						>
-							<div className="flex flex-col gap-5">
-								<div className="flex flex-col gap-1.5">
-									<label
-										htmlFor={playerASelectId}
-										className="text-sm font-medium text-gray-700 dark:text-gray-200"
-									>
-										Player A
-									</label>
-									<select
-										id={playerASelectId}
-										value={playerAId}
-										onChange={(e) => {
-											setPlayerAId(e.target.value);
-											if (e.target.value === playerBId) setPlayerBId('');
-										}}
-										className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
-									>
-										<option value="">Select a player…</option>
-										{leaguePlaces.map((p) => (
-											<option key={p.id} value={p.id}>
-												{p.username}
-											</option>
-										))}
-									</select>
-								</div>
-
-								<div className="flex flex-col gap-1.5">
-									<label
-										htmlFor={playerBSelectId}
-										className="text-sm font-medium text-gray-700 dark:text-gray-200"
-									>
-										Player B
-									</label>
-									<select
-										id={playerBSelectId}
-										value={playerBId}
-										onChange={(e) => setPlayerBId(e.target.value)}
-										className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
-									>
-										<option value="">Select a player…</option>
-										{leaguePlaces
-											.filter((p) => p.id !== playerAId)
-											.map((p) => (
-												<option key={p.id} value={p.id}>
-													{p.username}
-												</option>
-											))}
-									</select>
-								</div>
-
-								<RadioGroup
-									label="Result"
-									name="result"
-									value={result}
-									onChange={(v) => setResult(v as EloResult)}
-									options={[
-										{
-											value: 'A',
-											label: `${playerAUsername ?? 'Player A'} won`,
-										},
-										{ value: 'draw', label: 'Draw' },
-										{
-											value: 'B',
-											label: `${playerBUsername ?? 'Player B'} won`,
-										},
-									]}
-								/>
-
-								{error && <p className="text-red-400 text-sm">{error}</p>}
-							</div>
-						</Dialog>
-					</div>
-				</div>
+				<RecordGameModal
+					players={leaguePlaces}
+					onClose={() => setModalOpen(false)}
+					onSuccess={() => {
+						setModalOpen(false);
+						router.invalidate();
+					}}
+				/>
 			)}
 		</div>
 	);
