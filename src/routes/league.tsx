@@ -33,7 +33,12 @@ export const recordGameFn = createServerFn({ method: 'POST' })
 		const { createClerkClient } = await import('@clerk/backend');
 		const { getRequest } = await import('@tanstack/react-start/server');
 		const clerk = createClerkClient({ secretKey, publishableKey });
-		const auth = await clerk.authenticateRequest(getRequest());
+		// Pass a headers-only clone — the original request body is already consumed
+		// by TanStack Start to deserialize the server function arguments.
+		const req = getRequest();
+		const auth = await clerk.authenticateRequest(
+			new Request(req.url, { headers: req.headers }),
+		);
 		if (!auth.isSignedIn) throw new Error('Unauthorized');
 
 		const { recordGame } = await import('../lib/record-game');
