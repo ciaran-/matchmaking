@@ -213,6 +213,47 @@ export async function getMatchState(
 }
 
 /**
+ * Returns the `matchId`s of pending matches whose latest event is
+ * `PROPOSED` or `CONFIRMED_BY` AND whose `PROPOSED.createdAt` is older
+ * than `staleAfterSeconds` seconds ago.
+ *
+ * Used by the scheduled tick to find pending matches that need to be
+ * swept by `expireIfStale`. The hot path expires individually on poll;
+ * this is the backstop for matches where neither player is polling
+ * (both walked away).
+ *
+ * Implementation: `DISTINCT ON ("matchId")` over the event log to pick
+ * the most recent event per match (with an `id` tiebreaker matching the
+ * style used elsewhere in this file), then filter to the
+ * `PROPOSED`/`CONFIRMED_BY` cases whose PROPOSED row's `createdAt` is
+ * older than the cutoff.
+ */
+export async function getStaleMatchIds(
+	staleAfterSeconds: number,
+	client: DbClient = prisma,
+): Promise<string[]> {
+	const cutoff = new Date(Date.now() - staleAfterSeconds * 1000);
+	const rows = await client.$queryRaw<
+		{ matchId: string; type: string; proposedAt: Date }[]
+	>`
+		SELECT "matchId", "type"::text AS "type", "proposedAt"
+		FROM (
+			SELECT DISTINCT ON ("matchId")
+				"matchId",
+				"type",
+				(SELECT MIN("createdAt") FROM "PendingGameEvent" p2
+					WHERE p2."matchId" = p1."matchId" AND p2."type" = 'PROPOSED') AS "proposedAt"
+			FROM "PendingGameEvent" p1
+			ORDER BY "matchId", "createdAt" DESC, "id" DESC
+		) latest
+		WHERE "type" IN ('PROPOSED', 'CONFIRMED_BY')
+			AND "proposedAt" IS NOT NULL
+			AND "proposedAt" < ${cutoff}
+	`;
+	return rows.map((r) => r.matchId);
+}
+
+/**
  * Returns the derived state of a specific search attempt, regardless of
  * whether it's active or terminal. Returns `null` if no events exist
  * for the attempt.
