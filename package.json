@@ -40,7 +40,7 @@
     "@tanstack/react-router": "^1.168.10",
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/react-router-ssr-query": "^1.131.7",
-    "@tanstack/react-start": "^1.167.16",
+    "@tanstack/react-start": "^1.167.65",
     "@tanstack/react-store": "^0.7.0",
     "@tanstack/router-core": "^1.168.9",
     "@tanstack/router-plugin": "^1.167.12",
