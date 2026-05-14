@@ -25,6 +25,10 @@ export async function createTestDatabase(): Promise<TestDatabase> {
 
 	const prisma = new PrismaClient({ datasources: { db: { url } } });
 
+	// Route the @/db singleton proxy to the container client so that lib
+	// functions (e.g. recordGame) use the same connection as test assertions.
+	globalThis.__prisma = prisma;
+
 	return {
 		prisma,
 		reset: async () => {
