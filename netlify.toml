@@ -1,6 +1,8 @@
 [build]
   command = "npm run build"
   dir = "dist/client"
+[functions]
+  directory = "netlify/functions"
 [dev]
   command = "npm run dev"
   port = 3000
