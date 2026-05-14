@@ -6,9 +6,9 @@ export default defineConfig({
 		include: ['src/**/*.integration.test.ts'],
 		// testcontainers requires real child processes, not worker threads.
 		pool: 'forks',
-		// Container startup can take ~10–15s on a cold image pull.
+		// Container startup: ~2s warm cache, up to ~120s on first cold pull.
 		testTimeout: 60_000,
-		hookTimeout: 60_000,
+		hookTimeout: 120_000,
 	},
 	resolve: {
 		alias: {
