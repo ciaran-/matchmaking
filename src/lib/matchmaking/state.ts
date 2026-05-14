@@ -95,7 +95,7 @@ export async function getActiveSearchForUser(
 ): Promise<DerivedSearchState | null> {
 	const latest = await client.matchmakingSearchEvent.findFirst({
 		where: { userId },
-		orderBy: { createdAt: 'desc' },
+		orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
 	});
 	if (!latest) return null;
 
@@ -108,7 +108,7 @@ export async function getActiveSearchForUser(
 			? latest
 			: await client.matchmakingSearchEvent.findFirst({
 					where: { attemptId: latest.attemptId, type: 'STARTED' },
-					orderBy: { createdAt: 'asc' },
+					orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
 				});
 
 	if (!started) {
@@ -136,7 +136,7 @@ export async function getActiveSearches(
 	const rows = await client.$queryRaw<MatchmakingSearchEvent[]>`
 		SELECT DISTINCT ON ("attemptId") *
 		FROM "MatchmakingSearchEvent"
-		ORDER BY "attemptId", "createdAt" DESC
+		ORDER BY "attemptId", "createdAt" DESC, "id" DESC
 	`;
 
 	return rows
@@ -162,7 +162,7 @@ export async function getMatchState(
 ): Promise<DerivedMatchState | null> {
 	const events = await client.pendingGameEvent.findMany({
 		where: { matchId },
-		orderBy: { createdAt: 'asc' },
+		orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
 	});
 
 	if (events.length === 0) return null;
@@ -223,7 +223,7 @@ export async function getSearchAttempt(
 ): Promise<DerivedSearchState | null> {
 	const events = await client.matchmakingSearchEvent.findMany({
 		where: { attemptId },
-		orderBy: { createdAt: 'asc' },
+		orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
 	});
 
 	if (events.length === 0) return null;
