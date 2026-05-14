@@ -11,13 +11,12 @@ function getClient(): PrismaClient {
 	return globalThis.__prisma;
 }
 
-/**
- * Prisma client singleton. Resolved dynamically via globalThis.__prisma so
- * that integration tests can inject a container-backed client by setting
- * globalThis.__prisma before any database call is made.
- */
 export const prisma = new Proxy({} as PrismaClient, {
 	get(_target, prop) {
-		return Reflect.get(getClient(), prop as keyof PrismaClient);
+		const client = getClient();
+		const value = Reflect.get(client, prop as keyof PrismaClient);
+		return typeof value === 'function'
+			? (value as (...args: unknown[]) => unknown).bind(client)
+			: value;
 	},
 });
