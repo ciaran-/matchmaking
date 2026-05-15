@@ -184,6 +184,42 @@ export async function confirmPendingGame(
 			}
 
 			await prisma.$transaction(async (tx) => {
+				// Serialise concurrent confirms from the two players by locking
+				// both User rows in deterministic order (same pattern as
+				// proposePendingGame). Without this, under READ COMMITTED both
+				// transactions would re-read their own CONFIRMED_BY insert only,
+				// neither would observe both-confirmed, and neither would
+				// synthesise the BOTH_CONFIRMED transition event — leaving the
+				// match stuck at CONFIRMED_BY despite both players having
+				// confirmed.
+				const [firstUserId, secondUserId] = [
+					initial.playerAId,
+					initial.playerBId,
+				]
+					.slice()
+					.sort();
+				await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${firstUserId} FOR UPDATE`;
+				await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${secondUserId} FOR UPDATE`;
+
+				// Re-read inside the lock — another confirmer may have raced us
+				// to the lock and already inserted both events.
+				const preInsert = await getMatchState(matchId, tx);
+				if (!preInsert) {
+					throw new Error(
+						`confirmPendingGame: match ${matchId} disappeared mid-transaction`,
+					);
+				}
+				if (preInsert.confirmedBy.has(userId)) {
+					// Lost the race to insert our own CONFIRMED_BY: an idempotent
+					// retry from elsewhere got there first. Treat as success.
+					return;
+				}
+				if (TERMINAL_MATCH_STATUSES.has(preInsert.status)) {
+					throw new Error(
+						`confirmPendingGame: match ${matchId} became terminal mid-transaction (status=${preInsert.status})`,
+					);
+				}
+
 				await tx.pendingGameEvent.create({
 					data: {
 						matchId,

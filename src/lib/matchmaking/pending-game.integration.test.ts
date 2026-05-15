@@ -256,6 +256,39 @@ describe('confirmPendingGame', () => {
 		expect(both).toHaveLength(1);
 	});
 
+	it('synthesises BOTH_CONFIRMED under concurrent confirms from both players', async () => {
+		// Without serialisation, two concurrent transactions under READ
+		// COMMITTED each see only their own CONFIRMED_BY insert when
+		// re-reading, neither detects both-confirmed, and neither writes
+		// BOTH_CONFIRMED — leaving the match stuck. The SELECT FOR UPDATE
+		// lock on both User rows inside `confirmPendingGame` serialises
+		// them so the second transaction observes the first's commit and
+		// fires the synthesised event.
+		const { playerA, playerB, searchA, searchB } =
+			await twoSearchingPlayersAtEqualRating(db.prisma);
+		const match = await proposePendingGame(
+			searchA.attemptId,
+			searchB.attemptId,
+		);
+
+		await Promise.all([
+			confirmPendingGame(match.matchId, playerA.id),
+			confirmPendingGame(match.matchId, playerB.id),
+		]);
+
+		const state = await db.prisma.pendingGameEvent.findMany({
+			where: { matchId: match.matchId },
+			orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+		});
+		const confirmedBy = state.filter((e) => e.type === 'CONFIRMED_BY');
+		const both = state.filter((e) => e.type === 'BOTH_CONFIRMED');
+		expect(confirmedBy).toHaveLength(2);
+		expect(both).toHaveLength(1);
+		// Final event is BOTH_CONFIRMED — i.e. the match's derived status
+		// reflects both-confirmed, not stuck at CONFIRMED_BY.
+		expect(state[state.length - 1].type).toBe('BOTH_CONFIRMED');
+	});
+
 	it('throws when called by a non-participant', async () => {
 		const { searchA, searchB } = await twoSearchingPlayersAtEqualRating(
 			db.prisma,
