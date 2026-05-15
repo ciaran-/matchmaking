@@ -120,19 +120,30 @@ export const cancelSearchFn = createServerFn({ method: 'POST' }).handler(
  * function has a clean place to run `expireIfStale` as a side effect
  * (per plan decision #12).
  *
- * Returns the authenticated user's current `DerivedSearchState` and,
- * if the search is MATCHED (or was MATCHED before its match terminated),
- * the associated `DerivedMatchState`. Also returns:
+ * Returns:
  *
+ *   - `dbUserId`: the authed user's DB `User.id` (cuid). Used by the UI
+ *     to disambiguate playerA / playerB without trying to compare Clerk
+ *     ids against DB ids (which never match).
+ *   - `search`: the user's current `DerivedSearchState`, or null if no
+ *     active search exists.
+ *   - `match`: the `DerivedMatchState` for the user's most recent
+ *     match, regardless of whether the search is still active. This is
+ *     load-bearing for the post-result UI: once the result is recorded
+ *     the user's search becomes CONSUMED (and `getActiveSearchForUser`
+ *     returns null), but the UI still needs the match data to render
+ *     the result screen.
  *   - `opponent`: the other player's `{ id, username, currentRating }`
- *     when a match is in play. Pulled separately rather than baked into
- *     `DerivedMatchState` so the matchmaking lib stays display-agnostic.
- *   - `gameResult`: the resulting `GameResult` (including participants)
- *     when the match has reached PLAYED. Lets the UI surface the result
- *     even when the opponent submitted first.
+ *     when a match is in play or just-finished. Pulled separately
+ *     rather than baked into `DerivedMatchState` so the matchmaking lib
+ *     stays display-agnostic.
+ *   - `gameResult`: the resulting `GameResult` (with participants)
+ *     when the match has reached PLAYED. Lets the UI surface the
+ *     outcome even when the opponent submitted first.
  *
  * If the match is found to be stale on read (PROPOSED/CONFIRMED_BY older
- * than the confirm window), inline-expires it and re-reads.
+ * than the confirm window) AND the user is still in MATCHED state, the
+ * match is inline-expired and the state re-read.
  */
 export const pollSearchStatusFn = createServerFn({ method: 'POST' }).handler(
 	async () => {
@@ -149,24 +160,29 @@ export const pollSearchStatusFn = createServerFn({ method: 'POST' }).handler(
 				const { prisma } = await import('@/db');
 
 				let search = await getActiveSearchForUser(dbUser.id);
-				let match: Awaited<ReturnType<typeof getMatchState>> = null;
-				let matchIdForLookup: string | null = null;
 
-				if (search?.status === 'MATCHED' && search.matchId) {
-					// Inline expiry: if the match has been sitting unconfirmed past
-					// the window, this writes EXPIRED events for the match and both
-					// searches. `expireIfStale` returns null when the match is not
-					// stale; either way we re-read state below.
-					matchIdForLookup = search.matchId;
-					await expireIfStale(search.matchId);
-					// Re-read the search — its status may now be EXPIRED. Read the
-					// match by its original id so the UI still sees the (now-EXPIRED)
-					// match state even though the user's active search has cleared.
+				// Find the user's most recent match regardless of search state.
+				// This is what lets the result UI render after the search has
+				// transitioned to CONSUMED (search becomes null in that case).
+				const latestMatchedEvent =
+					await prisma.matchmakingSearchEvent.findFirst({
+						where: { userId: dbUser.id, matchId: { not: null } },
+						orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+						select: { matchId: true },
+					});
+				const matchId = latestMatchedEvent?.matchId ?? null;
+
+				// Inline expiry only when the user is currently in MATCHED state —
+				// i.e. they're an active participant whose poll can carry the
+				// expiry. Stale matches with no live polling player are handled
+				// by the periodic Netlify tick.
+				if (search?.status === 'MATCHED' && matchId) {
+					await expireIfStale(matchId);
 					search = await getActiveSearchForUser(dbUser.id);
-					match = await getMatchState(matchIdForLookup);
 				}
 
-				// Look up opponent + gameResult (for display) when we have a match.
+				const match = matchId ? await getMatchState(matchId) : null;
+
 				let opponent: {
 					id: string;
 					username: string;
@@ -191,7 +207,7 @@ export const pollSearchStatusFn = createServerFn({ method: 'POST' }).handler(
 					}
 				}
 
-				return { search, match, opponent, gameResult };
+				return { dbUserId: dbUser.id, search, match, opponent, gameResult };
 			},
 		);
 	},
@@ -414,7 +430,7 @@ function explainTerminal(poll: PollData | undefined): string | null {
 }
 
 function MatchPage() {
-	const { isSignedIn, isLoaded, user } = useUser();
+	const { isSignedIn, isLoaded } = useUser();
 	const router = useRouter();
 	const queryClient = useQueryClient();
 
@@ -440,12 +456,12 @@ function MatchPage() {
 
 	// Reconcile (currentPhase, pollData) → nextPhase whenever new poll data
 	// arrives. Also captures a terminal-state explanation for the banner.
+	// Uses the server-supplied `dbUserId` rather than trying to derive it
+	// client-side — Clerk's `user.id` and the DB `User.id` are different
+	// identifiers and never match.
 	useEffect(() => {
 		if (!pollQuery.data) return;
-		const dbUserId =
-			pollQuery.data.search?.userId ??
-			pollQuery.data.match?.playerAId ??
-			pollQuery.data.match?.playerBId;
+		const dbUserId = pollQuery.data.dbUserId;
 		setPhase((current) => {
 			const next = derivePhase(pollQuery.data, dbUserId, current);
 			if (next === 'idle-with-message' && current !== 'idle-with-message') {
@@ -570,14 +586,11 @@ function MatchPage() {
 	const match = poll?.match ?? null;
 	const opponent = poll?.opponent ?? null;
 	const gameResult = poll?.gameResult ?? null;
-	// `user` here is the Clerk user — we only need the DB user id, which
-	// lives on the polled search/match payload, so we don't have to call
-	// out to the server for it. Fall back to `null` until the first poll
-	// completes; mutations don't need it.
-	const dbUserId =
-		poll?.search?.userId ??
-		(match && (user?.id === match.playerAId ? match.playerAId : null)) ??
-		null;
+	// Server-supplied DB user id. Null until the first poll resolves —
+	// every section that depends on it is also gated on `match` or
+	// `poll`, so the null window doesn't render anything that would mis-
+	// orient the user.
+	const dbUserId = poll?.dbUserId ?? null;
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
