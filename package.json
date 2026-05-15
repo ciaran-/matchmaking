@@ -57,6 +57,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.4",
+    "@netlify/functions": "^5.2.1",
     "@tanstack/devtools-event-client": "^0.3.2",
     "@tanstack/devtools-vite": "^0.3.11",
     "@testcontainers/postgresql": "^11.14.0",
