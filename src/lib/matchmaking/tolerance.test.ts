@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+	ratingBand,
 	TOLERANCE_BASE,
 	TOLERANCE_CAP,
 	TOLERANCE_GROWTH_PER_SEC,
-	ratingBand,
 	toleranceForElapsed,
 } from './tolerance';
 

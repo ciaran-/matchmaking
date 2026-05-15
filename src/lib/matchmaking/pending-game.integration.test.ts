@@ -10,7 +10,6 @@ import {
 } from '@/test/factories/matchmaking-events';
 import { createUser } from '@/test/factories/user';
 import { twoSearchingPlayersAtEqualRating } from '@/test/scenarios';
-import { getMatchState, getSearchAttempt } from './state';
 import {
 	confirmPendingGame,
 	convertPendingGameToResult,
@@ -19,6 +18,7 @@ import {
 	PENDING_GAME_CONFIRM_WINDOW_SECONDS,
 	proposePendingGame,
 } from './pending-game';
+import { getMatchState, getSearchAttempt } from './state';
 
 let db: TestDatabase;
 

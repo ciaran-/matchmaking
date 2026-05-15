@@ -1,9 +1,9 @@
 import { useUser } from '@clerk/clerk-react';
 import type { GameParticipant, GameResult } from '@prisma/client';
+import * as Sentry from '@sentry/tanstackstart-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import * as Sentry from '@sentry/tanstackstart-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { EloResult } from '@/lib/elo';
 
