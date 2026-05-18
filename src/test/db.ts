@@ -33,6 +33,11 @@ export async function createTestDatabase(): Promise<TestDatabase> {
 		prisma,
 		reset: async () => {
 			// Delete children before parents to satisfy FK constraints.
+			// MatchmakingSearchEvent has a FK to User, so it must go before User.
+			// PendingGameEvent has no FKs (player/match refs are plain strings),
+			// but order it alongside the other event log for symmetry.
+			await prisma.matchmakingSearchEvent.deleteMany();
+			await prisma.pendingGameEvent.deleteMany();
 			await prisma.gameParticipant.deleteMany();
 			await prisma.gameResult.deleteMany();
 			await prisma.user.deleteMany();

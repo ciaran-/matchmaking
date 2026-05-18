@@ -25,6 +25,9 @@ model User {
   // Relation to game participations
   gameParticipations GameParticipant[]
 
+  // Relation to matchmaking search events (append-only audit log)
+  matchmakingSearchEvents MatchmakingSearchEvent[]
+
   @@index([currentRating])
 }
 
@@ -76,6 +79,70 @@ model GameParticipant {
   @@index([gameResultId, team])
 }
 
+// ---------- MATCHMAKING (event-sourced) ----------
+
+// Append-only event log for a single search attempt. Rows sharing an
+// `attemptId` describe the lifecycle of one search; the latest event
+// (by `createdAt` DESC) IS the current derived state.
+model MatchmakingSearchEvent {
+  id        String                     @id @default(cuid())
+  // Groups events for a single search attempt. Shared across all the
+  // STARTED/MATCHED/CONSUMED/etc rows produced for one attempt.
+  attemptId String
+  userId    String
+  user      User                       @relation(fields: [userId], references: [id])
+  type      MatchmakingSearchEventType
+
+  // Set on STARTED — rating snapshot at search create. Null on subsequent
+  // events for the same attempt (read from STARTED if needed).
+  rating Int?
+
+  // Set on MATCHED — references the PendingGameEvent.matchId for the
+  // proposal this search was paired into.
+  matchId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([attemptId, createdAt]) // latest-event-per-attempt scans
+  @@index([userId, createdAt]) // "what is this user currently doing?"
+  @@index([type, createdAt]) // reaper / analytics queries
+}
+
+// Append-only event log for a single match proposal. Rows sharing a
+// `matchId` describe the lifecycle of one proposal; the latest event
+// drives the derived status. No back-relation from GameResult — the
+// link is one-way via `gameResultId` (plain string, no FK relation) to
+// keep GameResult independent of matchmaking concerns.
+model PendingGameEvent {
+  id      String               @id @default(cuid())
+  // Groups events for a single match proposal.
+  matchId String
+  type    PendingGameEventType
+
+  // Set on PROPOSED — the static facts about the pairing.
+  playerAId        String?
+  playerBId        String?
+  // Display-only rating snapshots at match time. The actual rating math
+  // runs against User.currentRating at submit time inside recordGame.
+  playerARating    Int?
+  playerBRating    Int?
+  // Cross-references back into MatchmakingSearchEvent.attemptId for the
+  // two searches that produced this proposal.
+  searchAAttemptId String?
+  searchBAttemptId String?
+
+  // Set on CONFIRMED_BY and DECLINED — which player took the action.
+  actingPlayerId String?
+
+  // Set on PLAYED — the GameResult this match was recorded as.
+  gameResultId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([matchId, createdAt])
+  @@index([type, createdAt])
+}
+
 // ---------- ENUMS ----------
 
 enum Team {
@@ -90,4 +157,23 @@ enum GameMode {
   // RANKED
   // CASUAL
   // CUSTOM
+}
+
+enum MatchmakingSearchEventType {
+  STARTED // player entered the queue
+  MATCHED // matcher paired this attempt into a PendingGame (matchId set)
+  CANCELLED // player cancelled their own search
+  ABANDONED // reaper swept a stale STARTED-only attempt
+  DECLINED // associated match was declined by one side
+  EXPIRED // associated match expired (didn't confirm in time)
+  CONSUMED // associated match was played → GameResult exists
+}
+
+enum PendingGameEventType {
+  PROPOSED // matcher paired two searches; players see "match found, confirm?"
+  CONFIRMED_BY // one side confirmed (actingPlayerId identifies which)
+  BOTH_CONFIRMED // synthesised transition event, fired when the second CONFIRMED_BY lands
+  DECLINED // one player declined; terminal
+  EXPIRED // confirm window passed; terminal
+  PLAYED // result submitted → GameResult exists; terminal
 }

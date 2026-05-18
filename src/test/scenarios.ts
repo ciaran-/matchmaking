@@ -1,4 +1,9 @@
-import type { PrismaClient, User } from '@prisma/client';
+import type {
+	MatchmakingSearchEvent,
+	PrismaClient,
+	User,
+} from '@prisma/client';
+import { createStartedSearch } from './factories/matchmaking-events';
 import { createUser } from './factories/user';
 
 /**
@@ -25,4 +30,22 @@ export async function twoUnequalRatedPlayers(
 	const playerA = await createUser(prisma, { currentRating: ratingA });
 	const playerB = await createUser(prisma, { currentRating: ratingB });
 	return [playerA, playerB];
+}
+
+/**
+ * Two equal-rated players, each with an active STARTED search. The
+ * canonical baseline for matchmaking tests that need a pairable pair.
+ */
+export async function twoSearchingPlayersAtEqualRating(
+	prisma: PrismaClient,
+): Promise<{
+	playerA: User;
+	playerB: User;
+	searchA: { attemptId: string; event: MatchmakingSearchEvent };
+	searchB: { attemptId: string; event: MatchmakingSearchEvent };
+}> {
+	const [playerA, playerB] = await twoEqualRatedPlayers(prisma);
+	const searchA = await createStartedSearch(prisma, playerA);
+	const searchB = await createStartedSearch(prisma, playerB);
+	return { playerA, playerB, searchA, searchB };
 }

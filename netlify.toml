@@ -1,6 +1,12 @@
 [build]
-  command = "npm run build"
+  # Apply pending Prisma migrations before building so deploys never
+  # land code that references a column/table that doesn't yet exist in
+  # the target DB. `migrate deploy` only applies pending migrations and
+  # is idempotent — safe to run on every deploy.
+  command = "npx prisma migrate deploy && npm run build"
   dir = "dist/client"
+[functions]
+  directory = "netlify/functions"
 [dev]
   command = "npm run dev"
   port = 3000

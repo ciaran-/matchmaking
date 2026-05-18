@@ -8,6 +8,7 @@ import { Dialog } from '@/components/storybook/dialog';
 import { RadioGroup } from '@/components/storybook/radio-group';
 import { prisma } from '@/db';
 import type { EloResult } from '@/lib/elo';
+import { userFacingError } from '@/lib/user-facing-errors';
 
 const getLeaguePlaces = createServerFn({
 	method: 'GET',
@@ -83,7 +84,9 @@ function RecordGameModal({
 			await recordGameFn({ data: { playerAId, playerBId, result } });
 			onSuccess();
 		} catch (e) {
-			setError((e as { message?: string }).message ?? 'Failed to record game');
+			setError(
+				userFacingError(e, "Couldn't record the game. Please try again."),
+			);
 		} finally {
 			setSubmitting(false);
 		}
