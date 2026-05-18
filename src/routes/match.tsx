@@ -6,6 +6,7 @@ import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { useEffect, useMemo, useState } from 'react';
 import type { EloResult } from '@/lib/elo';
+import { userFacingError } from '@/lib/user-facing-errors';
 
 /**
  * `GameResult` with its participants eagerly loaded — matches the
@@ -487,7 +488,7 @@ function MatchPage() {
 		},
 		onError: (e) =>
 			setMutationError(
-				(e as { message?: string }).message ?? 'Failed to start search',
+				userFacingError(e, "Couldn't start a match. Please try again."),
 			),
 	});
 
@@ -500,7 +501,7 @@ function MatchPage() {
 		},
 		onError: (e) =>
 			setMutationError(
-				(e as { message?: string }).message ?? 'Failed to cancel',
+				userFacingError(e, "Couldn't cancel the search. Please try again."),
 			),
 	});
 
@@ -509,7 +510,7 @@ function MatchPage() {
 		onSuccess: () => invalidatePoll(),
 		onError: (e) =>
 			setMutationError(
-				(e as { message?: string }).message ?? 'Failed to confirm',
+				userFacingError(e, "Couldn't accept the match. Please try again."),
 			),
 	});
 
@@ -522,7 +523,7 @@ function MatchPage() {
 		},
 		onError: (e) =>
 			setMutationError(
-				(e as { message?: string }).message ?? 'Failed to decline',
+				userFacingError(e, "Couldn't decline the match. Please try again."),
 			),
 	});
 
@@ -536,7 +537,7 @@ function MatchPage() {
 		},
 		onError: (e) =>
 			setMutationError(
-				(e as { message?: string }).message ?? 'Failed to record result',
+				userFacingError(e, "Couldn't record the result. Please try again."),
 			),
 	});
 
