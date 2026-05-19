@@ -11,7 +11,6 @@ import { createServerFn } from '@tanstack/react-start';
 import Header from '../components/Header';
 import ClerkProvider from '../integrations/clerk/provider';
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools';
-import StoreDevtools from '../lib/demo-store-devtools';
 import appCss from '../styles.css?url';
 
 const syncUserFn = createServerFn({ method: 'POST' }).handler(async () => {
@@ -43,7 +42,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: 'width=device-width, initial-scale=1',
 			},
 			{
-				title: 'TanStack Start Starter',
+				title: 'Matchmaking',
 			},
 		],
 		links: [
@@ -76,7 +75,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 								name: 'Tanstack Router',
 								render: <TanStackRouterDevtoolsPanel />,
 							},
-							StoreDevtools,
 							TanStackQueryDevtools,
 						]}
 					/>
