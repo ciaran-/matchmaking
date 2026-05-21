@@ -9,6 +9,7 @@ import {
 } from '@/test/factories/matchmaking-events';
 import { createUser } from '@/test/factories/user';
 import {
+	getActiveMatches,
 	getActiveSearches,
 	getActiveSearchForUser,
 	getMatchState,
@@ -352,5 +353,177 @@ describe('getSearchAttempt', () => {
 		const state = await getSearchAttempt(attemptId);
 		expect(state?.status).toBe('MATCHED');
 		expect(state?.matchId).toBe('m-100');
+	});
+});
+
+describe('getActiveMatches', () => {
+	it('returns an empty array when no match events exist', async () => {
+		const result = await getActiveMatches(db.prisma);
+		expect(result).toEqual([]);
+	});
+
+	it('includes a match with only a PROPOSED event', async () => {
+		const userA = await createUser(db.prisma, { currentRating: 1000 });
+		const userB = await createUser(db.prisma, { currentRating: 1050 });
+		await appendMatchEvent(db.prisma, 'match-active-1', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1050,
+			searchAAttemptId: 'sa1',
+			searchBAttemptId: 'sb1',
+		});
+
+		const result = await getActiveMatches(db.prisma);
+
+		expect(result).toHaveLength(1);
+		expect(result[0]?.matchId).toBe('match-active-1');
+		expect(result[0]?.status).toBe('PROPOSED');
+		expect(result[0]?.playerARating).toBe(1000);
+		expect(result[0]?.playerBRating).toBe(1050);
+	});
+
+	it('includes a match with CONFIRMED_BY after PROPOSED', async () => {
+		const userA = await createUser(db.prisma);
+		const userB = await createUser(db.prisma);
+		await appendMatchEvent(db.prisma, 'match-active-2', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1000,
+			searchAAttemptId: 'sa2',
+			searchBAttemptId: 'sb2',
+		});
+		await appendMatchEvent(db.prisma, 'match-active-2', 'CONFIRMED_BY', {
+			actingPlayerId: userA.id,
+		});
+
+		const result = await getActiveMatches(db.prisma);
+
+		expect(result).toHaveLength(1);
+		expect(result[0]?.status).toBe('CONFIRMED_BY');
+	});
+
+	it('includes a BOTH_CONFIRMED match with confirmedBy.size === 2', async () => {
+		const userA = await createUser(db.prisma);
+		const userB = await createUser(db.prisma);
+		await appendMatchEvent(db.prisma, 'match-active-3', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1000,
+			searchAAttemptId: 'sa3',
+			searchBAttemptId: 'sb3',
+		});
+		await appendMatchEvent(db.prisma, 'match-active-3', 'CONFIRMED_BY', {
+			actingPlayerId: userA.id,
+		});
+		await appendMatchEvent(db.prisma, 'match-active-3', 'CONFIRMED_BY', {
+			actingPlayerId: userB.id,
+		});
+		await appendMatchEvent(db.prisma, 'match-active-3', 'BOTH_CONFIRMED');
+
+		const result = await getActiveMatches(db.prisma);
+
+		expect(result).toHaveLength(1);
+		expect(result[0]?.status).toBe('BOTH_CONFIRMED');
+		expect(result[0]?.confirmedBy.size).toBe(2);
+	});
+
+	it('excludes a match whose latest event is DECLINED', async () => {
+		const userA = await createUser(db.prisma);
+		const userB = await createUser(db.prisma);
+		await appendMatchEvent(db.prisma, 'match-declined', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1000,
+			searchAAttemptId: 'sad',
+			searchBAttemptId: 'sbd',
+		});
+		await appendMatchEvent(db.prisma, 'match-declined', 'DECLINED');
+
+		const result = await getActiveMatches(db.prisma);
+		expect(result).toEqual([]);
+	});
+
+	it('excludes a match whose latest event is EXPIRED', async () => {
+		const userA = await createUser(db.prisma);
+		const userB = await createUser(db.prisma);
+		await appendMatchEvent(db.prisma, 'match-expired', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1000,
+			searchAAttemptId: 'sae',
+			searchBAttemptId: 'sbe',
+		});
+		await appendMatchEvent(db.prisma, 'match-expired', 'EXPIRED');
+
+		const result = await getActiveMatches(db.prisma);
+		expect(result).toEqual([]);
+	});
+
+	it('excludes a match whose latest event is PLAYED', async () => {
+		const userA = await createUser(db.prisma);
+		const userB = await createUser(db.prisma);
+		await appendMatchEvent(db.prisma, 'match-played', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1000,
+			searchAAttemptId: 'sap',
+			searchBAttemptId: 'sbp',
+		});
+		await appendMatchEvent(db.prisma, 'match-played', 'PLAYED', {
+			gameResultId: 'gr-1',
+		});
+
+		const result = await getActiveMatches(db.prisma);
+		expect(result).toEqual([]);
+	});
+
+	it('returns only non-terminal matches when multiple matches exist', async () => {
+		const userA = await createUser(db.prisma);
+		const userB = await createUser(db.prisma);
+
+		// Active: PROPOSED
+		await appendMatchEvent(db.prisma, 'mixed-active', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1000,
+			searchAAttemptId: 'sma',
+			searchBAttemptId: 'smb',
+		});
+
+		// Terminal: DECLINED
+		await appendMatchEvent(db.prisma, 'mixed-declined', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1000,
+			searchAAttemptId: 'smc',
+			searchBAttemptId: 'smd',
+		});
+		await appendMatchEvent(db.prisma, 'mixed-declined', 'DECLINED');
+
+		// Terminal: PLAYED
+		await appendMatchEvent(db.prisma, 'mixed-played', 'PROPOSED', {
+			playerAId: userA.id,
+			playerBId: userB.id,
+			playerARating: 1000,
+			playerBRating: 1000,
+			searchAAttemptId: 'sme',
+			searchBAttemptId: 'smf',
+		});
+		await appendMatchEvent(db.prisma, 'mixed-played', 'PLAYED', {
+			gameResultId: 'gr-2',
+		});
+
+		const result = await getActiveMatches(db.prisma);
+
+		expect(result).toHaveLength(1);
+		expect(result[0]?.matchId).toBe('mixed-active');
 	});
 });
