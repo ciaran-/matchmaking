@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { useEffect, useMemo, useState } from 'react';
+import { LeagueActivity } from '@/components/LeagueActivity';
 import type { EloResult } from '@/lib/elo';
 import { userFacingError } from '@/lib/user-facing-errors';
 
@@ -314,6 +315,27 @@ export const recordPendingGameResultFn = createServerFn({ method: 'POST' })
 		);
 	});
 
+/**
+ * Anonymised league-activity bundle for the dashboard panel. Gated on
+ * a signed-in caller — the payload contains no identifying fields,
+ * but this still isn't exposed anonymously. Re-checked server-side
+ * defensively even though the page is behind the same gate.
+ */
+export const getLeagueActivityFn = createServerFn({ method: 'GET' }).handler(
+	async () => {
+		return Sentry.startSpan(
+			{ name: 'Matchmaking: league activity bundle server fn' },
+			async () => {
+				await authenticatedUser();
+				const { getLeagueActivity } = await import(
+					'@/lib/matchmaking/dashboard'
+				);
+				return getLeagueActivity();
+			},
+		);
+	},
+);
+
 export const Route = createFileRoute('/match')({
 	ssr: 'data-only',
 	component: MatchPage,
@@ -453,6 +475,16 @@ function MatchPage() {
 		queryFn: () => pollSearchStatusFn(),
 		refetchInterval: pollEnabled ? 2000 : false,
 		enabled: pollEnabled,
+	});
+
+	// Ambient league-activity panel. Polls independently of the per-player
+	// status — it stays visible across every phase, so its enablement
+	// doesn't depend on `pollEnabled`.
+	const leagueActivityQuery = useQuery({
+		queryKey: ['matchmaking', 'leagueActivity'],
+		queryFn: () => getLeagueActivityFn(),
+		refetchInterval: 5000,
+		enabled: isSignedIn === true,
 	});
 
 	// Reconcile (currentPhase, pollData) → nextPhase whenever new poll data
@@ -672,6 +704,18 @@ function MatchPage() {
 						onReset={resetToIdle}
 					/>
 				)}
+
+				<div className="mt-10">
+					<LeagueActivity
+						bundle={leagueActivityQuery.data}
+						isLoading={leagueActivityQuery.isLoading}
+						error={
+							leagueActivityQuery.error
+								? { message: leagueActivityQuery.error.message }
+								: undefined
+						}
+					/>
+				</div>
 			</section>
 		</div>
 	);
