@@ -18,6 +18,7 @@ interface GameResultOverrides {
 	teamAScore?: number;
 	teamBScore?: number;
 	participants?: ParticipantSpec[];
+	createdAt?: Date;
 }
 
 export async function createGameResult(
@@ -29,6 +30,9 @@ export async function createGameResult(
 			mode: overrides.mode ?? 'ONE_VS_ONE',
 			teamAScore: overrides.teamAScore ?? 1,
 			teamBScore: overrides.teamBScore ?? 0,
+			...(overrides.createdAt !== undefined
+				? { createdAt: overrides.createdAt }
+				: {}),
 			participants: overrides.participants
 				? { create: overrides.participants }
 				: { create: [] },
