@@ -70,14 +70,14 @@ export function LeagueActivity({ bundle, isLoading, error }: Props) {
 		buckets.length === 0 &&
 		recentResults.last5Min === 0 &&
 		recentResults.lastHour === 0 &&
-		recentResults.today === 0;
+		recentResults.last24h === 0;
 
 	return (
 		<Frame stale={isStale}>
 			<div className="mt-4 grid grid-cols-3 gap-2">
 				<Counter label="Last 5 min" value={recentResults.last5Min} />
 				<Counter label="Last hour" value={recentResults.lastHour} />
-				<Counter label="Today" value={recentResults.today} />
+				<Counter label="Last 24h" value={recentResults.last24h} />
 			</div>
 
 			{isEmpty ? (

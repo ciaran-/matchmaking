@@ -18,7 +18,7 @@ export interface LeagueActivityBucket {
 
 export interface LeagueActivityBundle {
 	buckets: LeagueActivityBucket[];
-	recentResults: { last5Min: number; lastHour: number; today: number };
+	recentResults: { last5Min: number; lastHour: number; last24h: number };
 	generatedAt: string;
 }
 
@@ -41,17 +41,16 @@ export async function getLeagueActivity(
 	client: DbClient = prisma,
 ): Promise<LeagueActivityBundle> {
 	const now = new Date();
-	const startOfToday = new Date(now);
-	startOfToday.setHours(0, 0, 0, 0);
-	const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 	const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
+	const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+	const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-	const [searches, matches, last5Min, lastHour, today] = await Promise.all([
+	const [searches, matches, last5Min, lastHour, last24h] = await Promise.all([
 		getActiveSearches(client),
 		getActiveMatches(client),
 		client.gameResult.count({ where: { createdAt: { gte: fiveMinAgo } } }),
 		client.gameResult.count({ where: { createdAt: { gte: oneHourAgo } } }),
-		client.gameResult.count({ where: { createdAt: { gte: startOfToday } } }),
+		client.gameResult.count({ where: { createdAt: { gte: oneDayAgo } } }),
 	]);
 
 	const buckets = new Map<number, LeagueActivityBucket>();
@@ -81,7 +80,7 @@ export async function getLeagueActivity(
 
 	return {
 		buckets: [...buckets.values()].sort((a, b) => a.rating - b.rating),
-		recentResults: { last5Min, lastHour, today },
+		recentResults: { last5Min, lastHour, last24h },
 		generatedAt: now.toISOString(),
 	};
 }

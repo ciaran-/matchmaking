@@ -10,7 +10,7 @@ function bundle(
 ): LeagueActivityBundle {
 	return {
 		buckets: [],
-		recentResults: { last5Min: 0, lastHour: 0, today: 0 },
+		recentResults: { last5Min: 0, lastHour: 0, last24h: 0 },
 		generatedAt: new Date().toISOString(),
 		...overrides,
 	};
@@ -22,14 +22,14 @@ describe('LeagueActivity', () => {
 			<LeagueActivity
 				isLoading={false}
 				bundle={bundle({
-					recentResults: { last5Min: 3, lastHour: 12, today: 47 },
+					recentResults: { last5Min: 3, lastHour: 12, last24h: 47 },
 				})}
 			/>,
 		);
 
 		expect(screen.getByText('Last 5 min')).toBeDefined();
 		expect(screen.getByText('Last hour')).toBeDefined();
-		expect(screen.getByText('Today')).toBeDefined();
+		expect(screen.getByText('Last 24h')).toBeDefined();
 		expect(screen.getByText('3')).toBeDefined();
 		expect(screen.getByText('12')).toBeDefined();
 		expect(screen.getByText('47')).toBeDefined();

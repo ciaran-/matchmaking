@@ -27,12 +27,10 @@ beforeAll(async () => {
 
 beforeEach(async () => {
 	await db.reset();
-	// Pin "now" to noon local time so the recent-results windows are
-	// deterministic regardless of when CI runs. Local-time pinning keeps
-	// `setHours(0, 0, 0, 0)` (used inside getLeagueActivity to compute
-	// startOfToday) safe across timezones.
+	// Pin "now" so the recent-results windows are deterministic
+	// regardless of when CI runs.
 	vi.useFakeTimers();
-	vi.setSystemTime(new Date('2026-06-15T12:00:00'));
+	vi.setSystemTime(new Date('2026-06-15T12:00:00Z'));
 });
 
 afterEach(() => {
@@ -61,7 +59,7 @@ describe('getLeagueActivity', () => {
 		expect(bundle.recentResults).toEqual({
 			last5Min: 0,
 			lastHour: 0,
-			today: 0,
+			last24h: 0,
 		});
 		expect(typeof bundle.generatedAt).toBe('string');
 		expect(() => new Date(bundle.generatedAt).toISOString()).not.toThrow();
@@ -149,23 +147,23 @@ describe('getLeagueActivity', () => {
 	});
 
 	it('counts recent results across the three time windows', async () => {
-		const now = new Date('2026-06-15T12:00:00');
+		const now = new Date('2026-06-15T12:00:00Z');
 		const twoMinAgo = new Date(now.getTime() - 2 * 60 * 1000);
 		const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
 		const fiveHoursAgo = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-		const yesterday = new Date(now.getTime() - 25 * 60 * 60 * 1000);
+		const over24hAgo = new Date(now.getTime() - 25 * 60 * 60 * 1000);
 
 		await createGameResult(db.prisma, { createdAt: twoMinAgo });
 		await createGameResult(db.prisma, { createdAt: thirtyMinAgo });
 		await createGameResult(db.prisma, { createdAt: fiveHoursAgo });
-		await createGameResult(db.prisma, { createdAt: yesterday });
+		await createGameResult(db.prisma, { createdAt: over24hAgo });
 
 		const bundle = await getLeagueActivity(db.prisma);
 
 		expect(bundle.recentResults).toEqual({
 			last5Min: 1,
 			lastHour: 2,
-			today: 3,
+			last24h: 3,
 		});
 	});
 
@@ -255,7 +253,7 @@ describe('getLeagueActivity anonymisation contract', () => {
 
 		// At least one recent game.
 		await createGameResult(db.prisma, {
-			createdAt: new Date('2026-06-15T11:30:00'),
+			createdAt: new Date('2026-06-15T11:30:00Z'),
 		});
 
 		const bundle = await getLeagueActivity(db.prisma);
@@ -263,7 +261,7 @@ describe('getLeagueActivity anonymisation contract', () => {
 		// Sanity: the scenario actually populated buckets and counters so a
 		// trivial empty-bundle pass can't disguise a real leak.
 		expect(bundle.buckets.length).toBeGreaterThan(0);
-		expect(bundle.recentResults.today).toBeGreaterThan(0);
+		expect(bundle.recentResults.last24h).toBeGreaterThan(0);
 
 		const keys = collectKeys(bundle);
 		FORBIDDEN_KEYS.forEach((forbidden) => {
