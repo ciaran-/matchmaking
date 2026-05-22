@@ -8,6 +8,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 import { useEffect, useMemo, useState } from 'react';
 import { LeagueActivity } from '@/components/LeagueActivity';
+import { SignInGate } from '@/components/SignInGate';
 import { prisma } from '@/db';
 import type { EloResult } from '@/lib/elo';
 import { getLeagueActivity } from '@/lib/matchmaking/dashboard';
@@ -429,7 +430,7 @@ function explainTerminal(poll: PollData | undefined): string | null {
 }
 
 function MatchPage() {
-	const { isSignedIn, isLoaded } = useUser();
+	const { isSignedIn } = useUser();
 	const router = useRouter();
 	const queryClient = useQueryClient();
 
@@ -584,13 +585,6 @@ function MatchPage() {
 		recordResultMutation.mutate({ matchId, result });
 	};
 
-	if (!isLoaded) {
-		return <div className="p-4 text-white">Loading…</div>;
-	}
-	if (!isSignedIn) {
-		return <div className="p-4 text-white">Sign in to find a match.</div>;
-	}
-
 	const poll = pollQuery.data;
 	const match = poll?.match ?? null;
 	const opponent = poll?.opponent ?? null;
@@ -610,88 +604,92 @@ function MatchPage() {
 						MAKING
 					</span>
 				</h1>
-				<p className="mt-3 text-sm uppercase tracking-widest text-slate-400">
-					{phaseLabel(phase)}
-				</p>
+				{isSignedIn && (
+					<p className="mt-3 text-sm uppercase tracking-widest text-slate-400">
+						{phaseLabel(phase)}
+					</p>
+				)}
 			</section>
 
 			<section className="max-w-2xl mx-auto px-6 pb-16">
-				{mutationError && (
-					<div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-						{mutationError}
+				<SignInGate>
+					{mutationError && (
+						<div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+							{mutationError}
+						</div>
+					)}
+
+					{phase === 'idle' && (
+						<IdleSection
+							onStart={handleStart}
+							disabled={startMutation.isPending}
+						/>
+					)}
+
+					{phase === 'idle-with-message' && (
+						<IdleSection
+							onStart={handleStart}
+							disabled={startMutation.isPending}
+							banner={terminalMessage}
+							onDismiss={resetToIdle}
+						/>
+					)}
+
+					{phase === 'searching' && poll?.search && (
+						<SearchingSection
+							startedAt={poll.search.startedAt}
+							rating={poll.search.rating}
+							onCancel={handleCancel}
+							cancelling={cancelMutation.isPending}
+						/>
+					)}
+
+					{phase === 'match-proposed' && match && (
+						<MatchProposedSection
+							match={match}
+							opponent={opponent}
+							dbUserId={dbUserId}
+							onConfirm={() => handleConfirm(match.matchId)}
+							onDecline={() => handleDecline(match.matchId)}
+							confirming={confirmMutation.isPending}
+							declining={declineMutation.isPending}
+						/>
+					)}
+
+					{phase === 'waiting-on-opponent' && match && opponent && (
+						<WaitingOnOpponentSection opponent={opponent} />
+					)}
+
+					{phase === 'play' && match && opponent && (
+						<PlaySection
+							opponent={opponent}
+							onSubmit={(result) => handleSubmitResult(match.matchId, result)}
+							submitting={recordResultMutation.isPending}
+						/>
+					)}
+
+					{phase === 'submit-result' && match && (
+						<SubmitResultSection
+							match={match}
+							gameResult={gameResult}
+							opponent={opponent}
+							dbUserId={dbUserId}
+							onReset={resetToIdle}
+						/>
+					)}
+
+					<div className="mt-10">
+						<LeagueActivity
+							bundle={leagueActivityQuery.data}
+							isLoading={leagueActivityQuery.isLoading}
+							error={
+								leagueActivityQuery.error
+									? { message: leagueActivityQuery.error.message }
+									: undefined
+							}
+						/>
 					</div>
-				)}
-
-				{phase === 'idle' && (
-					<IdleSection
-						onStart={handleStart}
-						disabled={startMutation.isPending}
-					/>
-				)}
-
-				{phase === 'idle-with-message' && (
-					<IdleSection
-						onStart={handleStart}
-						disabled={startMutation.isPending}
-						banner={terminalMessage}
-						onDismiss={resetToIdle}
-					/>
-				)}
-
-				{phase === 'searching' && poll?.search && (
-					<SearchingSection
-						startedAt={poll.search.startedAt}
-						rating={poll.search.rating}
-						onCancel={handleCancel}
-						cancelling={cancelMutation.isPending}
-					/>
-				)}
-
-				{phase === 'match-proposed' && match && (
-					<MatchProposedSection
-						match={match}
-						opponent={opponent}
-						dbUserId={dbUserId}
-						onConfirm={() => handleConfirm(match.matchId)}
-						onDecline={() => handleDecline(match.matchId)}
-						confirming={confirmMutation.isPending}
-						declining={declineMutation.isPending}
-					/>
-				)}
-
-				{phase === 'waiting-on-opponent' && match && opponent && (
-					<WaitingOnOpponentSection opponent={opponent} />
-				)}
-
-				{phase === 'play' && match && opponent && (
-					<PlaySection
-						opponent={opponent}
-						onSubmit={(result) => handleSubmitResult(match.matchId, result)}
-						submitting={recordResultMutation.isPending}
-					/>
-				)}
-
-				{phase === 'submit-result' && match && (
-					<SubmitResultSection
-						match={match}
-						gameResult={gameResult}
-						opponent={opponent}
-						dbUserId={dbUserId}
-						onReset={resetToIdle}
-					/>
-				)}
-
-				<div className="mt-10">
-					<LeagueActivity
-						bundle={leagueActivityQuery.data}
-						isLoading={leagueActivityQuery.isLoading}
-						error={
-							leagueActivityQuery.error
-								? { message: leagueActivityQuery.error.message }
-								: undefined
-						}
-					/>
-				</div>
+				</SignInGate>
 			</section>
 		</div>
 	);
