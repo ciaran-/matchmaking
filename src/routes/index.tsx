@@ -1,4 +1,4 @@
-import { useUser } from '@clerk/clerk-react';
+import { SignInButton, useUser } from '@clerk/clerk-react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/')({ component: Home });
@@ -31,7 +31,14 @@ function Home() {
 					{!isLoaded && <p className="text-gray-400">Loading…</p>}
 
 					{isLoaded && !isSignedIn && (
-						<p className="text-gray-300">Sign in to find a match.</p>
+						<SignInButton mode="modal">
+							<button
+								type="button"
+								className="inline-block px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 shadow-lg shadow-cyan-500/30 transition-colors"
+							>
+								Sign in to find a match →
+							</button>
+						</SignInButton>
 					)}
 
 					{isLoaded && isSignedIn && (
