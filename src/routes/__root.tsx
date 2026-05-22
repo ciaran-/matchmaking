@@ -11,10 +11,10 @@ import { createServerFn } from '@tanstack/react-start';
 import Header from '../components/Header';
 import ClerkProvider from '../integrations/clerk/provider';
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools';
+import { syncUser } from '../lib/sync-user';
 import appCss from '../styles.css?url';
 
 const syncUserFn = createServerFn({ method: 'POST' }).handler(async () => {
-	const { syncUser } = await import('../lib/sync-user');
 	return syncUser();
 });
 
