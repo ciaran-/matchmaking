@@ -145,26 +145,17 @@ export async function getActiveSearches(
 }
 
 /**
- * Returns the derived state of a match proposal, or `null` if no
- * PROPOSED event exists for the given matchId.
+ * Builds a `DerivedMatchState` from a chronologically-sorted list of
+ * `PendingGameEvent` rows for a single match. Returns `null` if no
+ * PROPOSED event is found (which would be an invariant violation).
  *
- * Reads every event for the match in chronological order, then:
- * - The PROPOSED event supplies the static facts (players, snapshots,
- *   source search refs).
- * - The latest event's `type` is the current `status`.
- * - `confirmedBy` accumulates every `CONFIRMED_BY` event's
- *   `actingPlayerId`.
- * - `gameResultId` is captured from the `PLAYED` event if present.
+ * Extracted so both `getMatchState` and `getActiveMatches` can share
+ * the same derivation logic without duplicating it.
  */
-export async function getMatchState(
+function buildDerivedMatchState(
 	matchId: string,
-	client: DbClient = prisma,
-): Promise<DerivedMatchState | null> {
-	const events = await client.pendingGameEvent.findMany({
-		where: { matchId },
-		orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-	});
-
+	events: PendingGameEvent[],
+): DerivedMatchState | null {
 	if (events.length === 0) return null;
 
 	const proposed = events.find((e) => e.type === 'PROPOSED');
@@ -185,14 +176,14 @@ export async function getMatchState(
 
 	const confirmedBy = new Set<string>();
 	let gameResultId: string | null = null;
-	for (const e of events) {
+	events.forEach((e) => {
 		if (e.type === 'CONFIRMED_BY' && e.actingPlayerId) {
 			confirmedBy.add(e.actingPlayerId);
 		}
 		if (e.type === 'PLAYED' && e.gameResultId) {
 			gameResultId = e.gameResultId;
 		}
-	}
+	});
 
 	const latest = events[events.length - 1] as PendingGameEvent;
 
@@ -210,6 +201,76 @@ export async function getMatchState(
 		gameResultId,
 		latestEventAt: latest.createdAt,
 	};
+}
+
+/**
+ * Returns the derived state of a match proposal, or `null` if no
+ * PROPOSED event exists for the given matchId.
+ *
+ * Reads every event for the match in chronological order, then:
+ * - The PROPOSED event supplies the static facts (players, snapshots,
+ *   source search refs).
+ * - The latest event's `type` is the current `status`.
+ * - `confirmedBy` accumulates every `CONFIRMED_BY` event's
+ *   `actingPlayerId`.
+ * - `gameResultId` is captured from the `PLAYED` event if present.
+ */
+export async function getMatchState(
+	matchId: string,
+	client: DbClient = prisma,
+): Promise<DerivedMatchState | null> {
+	const events = await client.pendingGameEvent.findMany({
+		where: { matchId },
+		orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+	});
+
+	return buildDerivedMatchState(matchId, events);
+}
+
+/**
+ * Returns every match whose latest event is non-terminal — i.e. the
+ * match is currently in `PROPOSED`, `CONFIRMED_BY`, or `BOTH_CONFIRMED`
+ * state. Used by the dashboard to build the activity bundle.
+ *
+ * Implementation mirrors `getActiveSearches`: `DISTINCT ON ("matchId")`
+ * picks the latest event per match in one round-trip, then filters to
+ * non-terminal rows. A second query fetches the full event history for
+ * the surviving matches so `buildDerivedMatchState` can reconstruct the
+ * complete state (confirmedBy set, ratings, etc.).
+ */
+export async function getActiveMatches(
+	client: DbClient = prisma,
+): Promise<DerivedMatchState[]> {
+	const TERMINAL: PendingGameEventType[] = ['DECLINED', 'EXPIRED', 'PLAYED'];
+
+	const latestRows = await client.$queryRaw<PendingGameEvent[]>`
+		SELECT DISTINCT ON ("matchId") *
+		FROM "PendingGameEvent"
+		ORDER BY "matchId", "createdAt" DESC, "id" DESC
+	`;
+
+	const activeMatchIds = latestRows
+		.filter((r) => !TERMINAL.includes(r.type))
+		.map((r) => r.matchId);
+
+	if (activeMatchIds.length === 0) return [];
+
+	const allEvents = await client.pendingGameEvent.findMany({
+		where: { matchId: { in: activeMatchIds } },
+		orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+	});
+
+	// Group events by matchId, then derive state for each match.
+	const byMatchId = new Map<string, PendingGameEvent[]>();
+	allEvents.forEach((e) => {
+		const list = byMatchId.get(e.matchId) ?? [];
+		list.push(e);
+		byMatchId.set(e.matchId, list);
+	});
+
+	return activeMatchIds
+		.map((id) => buildDerivedMatchState(id, byMatchId.get(id) ?? []))
+		.filter((s): s is DerivedMatchState => s !== null);
 }
 
 /**
