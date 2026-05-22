@@ -1,10 +1,10 @@
 import { createClerkClient } from '@clerk/backend';
-import { useUser } from '@clerk/clerk-react';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
 import { PlusCircle } from 'lucide-react';
 import { useId, useState } from 'react';
+import { SignInGate } from '@/components/SignInGate';
 import { Button } from '@/components/storybook/button';
 import { Dialog } from '@/components/storybook/dialog';
 import { RadioGroup } from '@/components/storybook/radio-group';
@@ -188,18 +188,9 @@ function RecordGameModal({
 }
 
 function LeagueTable() {
-	const { isSignedIn, isLoaded } = useUser();
 	const leaguePlaces = Route.useLoaderData();
 	const router = useRouter();
 	const [modalOpen, setModalOpen] = useState(false);
-
-	if (!isLoaded) {
-		return <div className="p-4">Loading...</div>;
-	}
-
-	if (!isSignedIn) {
-		return <div className="p-4">Sign in to view this page</div>;
-	}
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -223,54 +214,56 @@ function LeagueTable() {
 			</section>
 
 			<section className="py-16 px-6 max-w-7xl mx-auto flex flex-col items-center">
-				<button
-					type="button"
-					onClick={() => setModalOpen(true)}
-					className="mb-8 flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-lg"
-				>
-					<PlusCircle className="w-5 h-5" />
-					Record Game
-				</button>
-				<table>
-					<thead>
-						<tr className="border border-white bg-teal-600">
-							<th className="text-white px-4 py-2">Rank</th>
-							<th className="text-white px-4 py-2">Player</th>
-							<th className="text-white px-4 py-2">Wins</th>
-							<th className="text-white px-4 py-2">Losses</th>
-							<th className="text-white px-4 py-2">Games Played</th>
-							<th className="text-white px-4 py-2">Rating</th>
-						</tr>
-					</thead>
-					<tbody>
-						{leaguePlaces.length > 0 &&
-							leaguePlaces.map((player, index) => (
-								<tr
-									className="border-y border-white text-white text-center"
-									key={player.username}
-								>
-									<td className="py-1">{index + 1}</td>
-									<td className="py-1">{player.username}</td>
-									<td className="py-1">
-										{
-											player.gameParticipations.filter(
-												(game) => game.ratingChange > 0,
-											).length
-										}
-									</td>
-									<td className="py-1">
-										{
-											player.gameParticipations.filter(
-												(game) => game.ratingChange < 0,
-											).length
-										}
-									</td>
-									<td className="py-1">{player.gameParticipations.length}</td>
-									<td className="py-1">{player.currentRating}</td>
-								</tr>
-							))}
-					</tbody>
-				</table>
+				<SignInGate>
+					<button
+						type="button"
+						onClick={() => setModalOpen(true)}
+						className="mb-8 flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold px-5 py-2.5 rounded-lg transition-all shadow-lg"
+					>
+						<PlusCircle className="w-5 h-5" />
+						Record Game
+					</button>
+					<table>
+						<thead>
+							<tr className="border border-white bg-teal-600">
+								<th className="text-white px-4 py-2">Rank</th>
+								<th className="text-white px-4 py-2">Player</th>
+								<th className="text-white px-4 py-2">Wins</th>
+								<th className="text-white px-4 py-2">Losses</th>
+								<th className="text-white px-4 py-2">Games Played</th>
+								<th className="text-white px-4 py-2">Rating</th>
+							</tr>
+						</thead>
+						<tbody>
+							{leaguePlaces.length > 0 &&
+								leaguePlaces.map((player, index) => (
+									<tr
+										className="border-y border-white text-white text-center"
+										key={player.username}
+									>
+										<td className="py-1">{index + 1}</td>
+										<td className="py-1">{player.username}</td>
+										<td className="py-1">
+											{
+												player.gameParticipations.filter(
+													(game) => game.ratingChange > 0,
+												).length
+											}
+										</td>
+										<td className="py-1">
+											{
+												player.gameParticipations.filter(
+													(game) => game.ratingChange < 0,
+												).length
+											}
+										</td>
+										<td className="py-1">{player.gameParticipations.length}</td>
+										<td className="py-1">{player.currentRating}</td>
+									</tr>
+								))}
+						</tbody>
+					</table>
+				</SignInGate>
 			</section>
 
 			{modalOpen && (
