@@ -1,6 +1,8 @@
+import { createClerkClient } from '@clerk/backend';
 import { useUser } from '@clerk/clerk-react';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { getRequest } from '@tanstack/react-start/server';
 import { PlusCircle } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Button } from '@/components/storybook/button';
@@ -8,6 +10,7 @@ import { Dialog } from '@/components/storybook/dialog';
 import { RadioGroup } from '@/components/storybook/radio-group';
 import { prisma } from '@/db';
 import type { EloResult } from '@/lib/elo';
+import { recordGame } from '@/lib/record-game';
 import { userFacingError } from '@/lib/user-facing-errors';
 
 const getLeaguePlaces = createServerFn({
@@ -31,8 +34,6 @@ export const recordGameFn = createServerFn({ method: 'POST' })
 		if (!secretKey || !publishableKey)
 			throw new Error('Missing Clerk env vars');
 
-		const { createClerkClient } = await import('@clerk/backend');
-		const { getRequest } = await import('@tanstack/react-start/server');
 		const clerk = createClerkClient({ secretKey, publishableKey });
 		// Pass a headers-only clone — the original request body is already consumed
 		// by TanStack Start to deserialize the server function arguments.
@@ -42,7 +43,6 @@ export const recordGameFn = createServerFn({ method: 'POST' })
 		);
 		if (!auth.isSignedIn) throw new Error('Unauthorized');
 
-		const { recordGame } = await import('../lib/record-game');
 		return recordGame(data);
 	});
 

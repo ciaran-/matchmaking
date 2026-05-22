@@ -66,31 +66,30 @@ Prefer `.map()`, `.filter()`, `.reduce()` over `for` loops when transforming arr
 
 ## `createServerFn` Pattern
 
-Server-only modules (anything importing from `@tanstack/react-start/server`, Prisma, `@clerk/backend`, or other Node-only packages) must **never** be statically imported in route files. Always wrap them in `createServerFn` with a dynamic import inside the handler.
-
-```ts
-const myFn = createServerFn({ method: "POST" }).handler(async () => {
-  const { myServerModule } = await import("../lib/my-server-module");
-  return myServerModule();
-});
-```
+Import server-only modules **statically at the top of the file** — including in route files where the file's component is client-rendered. TanStack Start's `?tss-serverfn-split` Vite plugin extracts each `createServerFn().handler(...)` body (and the transitive imports reachable only from it, including top-level helpers like `authenticatedUser`) into a separate server-side chunk and stubs it in the client bundle, so the static import never reaches the browser.
 
 Use `method: 'POST'` for any handler with side effects (DB writes, auth checks with cookie sets). Use `method: 'GET'` only for pure reads — GET functions can be triggered by router preloading.
 
-**Why**: Vite follows static imports at build time. A static import of a server-only module in a route file pulls it into the client bundle, causing `"Readable" is not exported by "__vite-browser-external"` errors. The dev server never catches this — it only surfaces during `vite build`.
+Avoid dynamic `await import(...)` inside handlers. The TanStack Start docs explicitly recommend against it ("❌ Can cause bundler issues"). Earlier code in this repo used dynamic imports as a workaround for a Vite client-bundle leak; that workaround is no longer required and is now actively discouraged. If a leak does appear, the bug is in the specific file or import, not in the pattern.
+
+**Verification after non-trivial changes:** run `npm run build`, then grep the relevant `dist/client/assets/<route>-*.js` bundle for server-only signals. Package-level signals (`@prisma`, `PrismaClient`, `createClerkClient`, `@clerk/backend`, `DISTINCT ON`) must return zero matches. Imported symbol names are a softer check — they can legitimately appear in client-side debug strings, so compare against a clean baseline rather than expecting zero.
 
 ### Clerk auth guard (in server functions)
 
 ```ts
-const secretKey = process.env.CLERK_SECRET_KEY;
-const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
-if (!secretKey || !publishableKey) throw new Error("Missing Clerk env vars");
+import { createClerkClient } from '@clerk/backend';
+import { getRequest } from '@tanstack/react-start/server';
 
-const { createClerkClient } = await import("@clerk/backend");
-const { getRequest } = await import("@tanstack/react-start/server");
-const clerk = createClerkClient({ secretKey, publishableKey });
-const auth = await clerk.authenticateRequest(getRequest());
-if (!auth.isSignedIn) throw new Error("Unauthorized");
+const myFn = createServerFn({ method: 'POST' }).handler(async () => {
+  const secretKey = process.env.CLERK_SECRET_KEY;
+  const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
+  if (!secretKey || !publishableKey) throw new Error('Missing Clerk env vars');
+
+  const clerk = createClerkClient({ secretKey, publishableKey });
+  const auth = await clerk.authenticateRequest(getRequest());
+  if (!auth.isSignedIn) throw new Error('Unauthorized');
+  // ...
+});
 ```
 
 `@clerk/backend`'s `authenticateRequest` requires **both** `secretKey` and `publishableKey` passed explicitly — the backend SDK does not pick them up automatically.

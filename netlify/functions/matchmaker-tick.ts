@@ -1,9 +1,7 @@
 import type { Config } from '@netlify/functions';
+import { runMatcherPass } from '../../src/lib/matchmaking/run-matcher';
 
 export default async () => {
-	const { runMatcherPass } = await import(
-		'../../src/lib/matchmaking/run-matcher'
-	);
 	const result = await runMatcherPass();
 	return new Response(JSON.stringify(result), {
 		status: 200,
