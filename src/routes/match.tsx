@@ -1,12 +1,25 @@
+import { createClerkClient } from '@clerk/backend';
 import { useUser } from '@clerk/clerk-react';
 import type { GameParticipant, GameResult } from '@prisma/client';
 import * as Sentry from '@sentry/tanstackstart-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { getRequest } from '@tanstack/react-start/server';
 import { useEffect, useMemo, useState } from 'react';
 import { LeagueActivity } from '@/components/LeagueActivity';
+import { prisma } from '@/db';
 import type { EloResult } from '@/lib/elo';
+import { getLeagueActivity } from '@/lib/matchmaking/dashboard';
+import {
+	confirmPendingGame,
+	convertPendingGameToResult,
+	declinePendingGame,
+	expireIfStale,
+} from '@/lib/matchmaking/pending-game';
+import { runMatcherForSearch } from '@/lib/matchmaking/run-matcher';
+import { cancelSearch, createSearch } from '@/lib/matchmaking/search';
+import { getActiveSearchForUser, getMatchState } from '@/lib/matchmaking/state';
 import { userFacingError } from '@/lib/user-facing-errors';
 
 /**
@@ -17,12 +30,6 @@ import { userFacingError } from '@/lib/user-facing-errors';
 type GameResultWithParticipants = GameResult & {
 	participants: GameParticipant[];
 };
-
-// Server-only modules (`@/db`, `@/lib/matchmaking/*`, `@clerk/backend`,
-// `@tanstack/react-start/server`) are deliberately NOT imported at the top
-// of this file. They are dynamically imported inside each `createServerFn`
-// handler so Vite does not pull them into the client bundle. See
-// CLAUDE.md §"createServerFn Pattern".
 
 /**
  * Resolve the authenticated user for the current request. Performs the
@@ -44,8 +51,6 @@ async function authenticatedUser() {
 		throw new Error('Missing Clerk env vars');
 	}
 
-	const { createClerkClient } = await import('@clerk/backend');
-	const { getRequest } = await import('@tanstack/react-start/server');
 	const clerk = createClerkClient({ secretKey, publishableKey });
 	// Headers-only clone — TanStack Start has already consumed the original
 	// request body to deserialize the server function arguments. See
@@ -57,7 +62,6 @@ async function authenticatedUser() {
 	if (!auth.isSignedIn) throw new Error('Unauthorized');
 
 	const clerkId = auth.toAuth().userId;
-	const { prisma } = await import('@/db');
 	const dbUser = await prisma.user.findUnique({ where: { clerkId } });
 	if (!dbUser) throw new Error('User not found');
 	return dbUser;
@@ -80,13 +84,6 @@ export const startSearchFn = createServerFn({ method: 'POST' }).handler(
 			{ name: 'Matchmaking: start search server fn' },
 			async () => {
 				const dbUser = await authenticatedUser();
-				const { createSearch } = await import('@/lib/matchmaking/search');
-				const { runMatcherForSearch } = await import(
-					'@/lib/matchmaking/run-matcher'
-				);
-				const { getActiveSearchForUser } = await import(
-					'@/lib/matchmaking/state'
-				);
 
 				const search = await createSearch(dbUser.id);
 				await runMatcherForSearch(search.attemptId);
@@ -108,7 +105,6 @@ export const cancelSearchFn = createServerFn({ method: 'POST' }).handler(
 			{ name: 'Matchmaking: cancel search server fn' },
 			async () => {
 				const dbUser = await authenticatedUser();
-				const { cancelSearch } = await import('@/lib/matchmaking/search');
 				const search = await cancelSearch(dbUser.id);
 				return { search };
 			},
@@ -153,13 +149,6 @@ export const pollSearchStatusFn = createServerFn({ method: 'POST' }).handler(
 			{ name: 'Matchmaking: poll search status server fn' },
 			async () => {
 				const dbUser = await authenticatedUser();
-				const { getActiveSearchForUser, getMatchState } = await import(
-					'@/lib/matchmaking/state'
-				);
-				const { expireIfStale } = await import(
-					'@/lib/matchmaking/pending-game'
-				);
-				const { prisma } = await import('@/db');
 
 				let search = await getActiveSearchForUser(dbUser.id);
 
@@ -228,9 +217,6 @@ export const confirmMatchFn = createServerFn({ method: 'POST' })
 			{ name: 'Matchmaking: confirm match server fn' },
 			async () => {
 				const dbUser = await authenticatedUser();
-				const { confirmPendingGame } = await import(
-					'@/lib/matchmaking/pending-game'
-				);
 				const match = await confirmPendingGame(data.matchId, dbUser.id);
 				return { match };
 			},
@@ -249,9 +235,6 @@ export const declineMatchFn = createServerFn({ method: 'POST' })
 			{ name: 'Matchmaking: decline match server fn' },
 			async () => {
 				const dbUser = await authenticatedUser();
-				const { declinePendingGame } = await import(
-					'@/lib/matchmaking/pending-game'
-				);
 				const match = await declinePendingGame(data.matchId, dbUser.id);
 				return { match };
 			},
@@ -276,10 +259,6 @@ export const recordPendingGameResultFn = createServerFn({ method: 'POST' })
 			{ name: 'Matchmaking: record pending game result server fn' },
 			async () => {
 				const dbUser = await authenticatedUser();
-				const { getMatchState } = await import('@/lib/matchmaking/state');
-				const { convertPendingGameToResult } = await import(
-					'@/lib/matchmaking/pending-game'
-				);
 
 				const matchState = await getMatchState(data.matchId);
 				if (!matchState) {
@@ -327,9 +306,6 @@ export const getLeagueActivityFn = createServerFn({ method: 'GET' }).handler(
 			{ name: 'Matchmaking: league activity bundle server fn' },
 			async () => {
 				await authenticatedUser();
-				const { getLeagueActivity } = await import(
-					'@/lib/matchmaking/dashboard'
-				);
 				return getLeagueActivity();
 			},
 		);
