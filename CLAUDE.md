@@ -140,12 +140,13 @@ Integration tests use testcontainers to run against a real PostgreSQL instance. 
 
 **Infrastructure** (`src/test/`):
 
-- `src/test/db.ts` — spins up a Postgres container, applies migrations, exports `withRollback(prisma, fn)` that wraps each test in a rolled-back transaction for isolation
+- `src/test/db.ts` — spins up a Postgres container, applies migrations, and returns `{ prisma, reset, teardown }`. Isolation is per-test truncation via `reset()`, not a rolled-back transaction
+- `src/test/http.ts` — HTTP-level harness for API routes: `callRoute`, `apiRequest`, `readJson`, `stubClerkCredential`
 - `src/test/factories/user.ts` — `createUser(prisma, overrides?)`
 - `src/test/factories/game-result.ts` — `createGameResult(prisma, overrides?)` including participants
 - `src/test/scenarios.ts` — composable named setups (e.g. `twoEqualRatedPlayers`)
 
-Lifecycle: one container per test file (`beforeAll`/`afterAll`), one rolled-back transaction per test (`beforeEach`/`afterEach` via `withRollback`).
+Lifecycle: one container per test file (`beforeAll`/`afterAll`), `db.reset()` per test (`beforeEach`).
 
 Config: `vitest.integration.config.ts` — uses `--pool=forks` (testcontainers requires a real process, not threads). CI runs on `ubuntu-latest` which ships with Docker.
 

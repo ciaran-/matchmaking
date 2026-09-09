@@ -230,7 +230,7 @@ Keep `authenticatedUser` for the web server fns; `resolveApiUser` is the API edg
 
 ## T6 — Reference endpoint + HTTP-level test infra
 
-**Status:** pending
+**Status:** done — live-PAT curl outstanding
 **Depends on:** T2, T5
 **Blocks:** T7, T8, T9
 

@@ -149,10 +149,48 @@ would change.
 ## 7. Testing
 
 HTTP-level integration tests reuse `src/test/db.ts`, the factories, and
-`src/test/scenarios.ts` — no new DB infrastructure. The harness pattern is
-established in T6 and copied by T7–T9. Tests assert status code, envelope
-conformance, auth rejection, and DB effect — not the lib business logic,
-which is already covered.
+`src/test/scenarios.ts` — no new DB infrastructure. Tests assert status
+code, envelope conformance, auth rejection, and DB effect — not the lib
+business logic, which is already covered.
+
+### The harness (`src/test/http.ts`)
+
+A server route's handlers are plain functions on
+`Route.options.server.handlers`, so a test invokes one directly with a
+real `Request`. No server to boot, no port to bind, and the whole adapter
+— auth, validation, delegation, envelope, status — runs against a real
+database. Copy this shape:
+
+```ts
+vi.mock('@clerk/backend', () => ({ createClerkClient: vi.fn() }));
+
+// `handlers` is a union (method record *or* factory fn) — narrow it.
+const handlers = Route.options.server?.handlers as Record<string, RouteHandler>;
+
+stubClerkCredential(vi.mocked(createClerkClient), {
+	kind: 'apiKey',
+	clerkUserId: 'user_caller',
+});
+const { status, body } = await readJson(
+	await callRoute(handlers.GET, apiRequest(url)),
+);
+```
+
+`callRoute(handler, request, params?)` supplies the handler context —
+pass `params` for path-param routes (`{ matchId: 'm1' }`).
+`stubClerkCredential` covers `apiKey`, `session`, `orgKey` and `invalid`.
+
+**Clerk is mocked; the database is not.** That is the honest boundary:
+these tests prove the adapter treats both credentials identically and
+maps errors correctly. They do *not* prove Clerk verifies a key —
+that is Clerk's contract, and the only way to prove it is a live call
+with a real key.
+
+**Lifecycle.** `createTestDatabase()` in `beforeAll`, `db.reset()` in
+`beforeEach`, `db.teardown()` in `afterAll` — one container per file.
+Note `src/test/db.ts` exposes `reset`, not the `withRollback` helper
+CLAUDE.md and the task list describe; the rolled-back-transaction design
+was never built.
 
 ---
 
