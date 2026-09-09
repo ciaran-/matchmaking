@@ -183,6 +183,12 @@ Prefer the simplest solution (e.g., static markup over JS-driven components) unl
 
 ## Sub-agent and Worktree Delegation
 
+Worktrees live under `.claude/worktrees/` (gitignored). Biome excludes that
+path via `!**/.claude/worktrees` in `biome.json` — without it, each
+worktree's own `biome.json` is discovered as a nested root config and
+`npm run check` fails outright with `Found a nested root configuration`.
+Remove merged worktrees with `git worktree remove <path>` when done.
+
 When spawning agents with `isolation: "worktree"` or creating branches manually, use the pattern:
 
 ```
