@@ -25,7 +25,7 @@ import { createClerkClient } from '@clerk/backend';
 import type { User as DbUser } from '@prisma/client';
 import { getRequest } from '@tanstack/react-start/server';
 import { prisma } from '@/db';
-import { authenticatedUser } from './auth';
+import { authenticatedUser, resolveApiUser } from './auth';
 
 const mockGetRequest = vi.mocked(getRequest);
 const mockCreateClerkClient = vi.mocked(createClerkClient);
@@ -148,5 +148,99 @@ describe('authenticatedUser', () => {
 			// The handler must still be able to read the body afterwards.
 			expect(apiRequest.bodyUsed).toBe(false);
 		});
+	});
+});
+
+describe('resolveApiUser', () => {
+	/** Stub `authenticateRequest` and capture the options it was called with. */
+	function stubDualClerk(auth: {
+		isAuthenticated: boolean;
+		userId?: string | null;
+		orgId?: string | null;
+	}) {
+		const authenticateRequest = vi.fn().mockResolvedValue({
+			isAuthenticated: auth.isAuthenticated,
+			toAuth: () => ({
+				userId: auth.userId ?? null,
+				orgId: auth.orgId ?? null,
+			}),
+		});
+		mockCreateClerkClient.mockReturnValue({
+			authenticateRequest,
+		} as unknown as ClerkClient);
+		return authenticateRequest;
+	}
+
+	const apiRequest = () =>
+		new Request('https://example.test/api/v1/leaderboard', {
+			headers: { authorization: 'Bearer ak_live_key' },
+		});
+
+	it('accepts session tokens and API keys, and nothing else', async () => {
+		const authenticateRequest = stubDualClerk({
+			isAuthenticated: true,
+			userId: CLERK_ID,
+		});
+		mockFindUnique.mockResolvedValue(dbUser);
+
+		const request = apiRequest();
+		await resolveApiUser(request);
+
+		expect(authenticateRequest).toHaveBeenCalledWith(request, {
+			acceptsToken: ['session_token', 'api_key'],
+		});
+	});
+
+	it('resolves an API key to the DB user', async () => {
+		stubDualClerk({ isAuthenticated: true, userId: CLERK_ID });
+		mockFindUnique.mockResolvedValue(dbUser);
+
+		await expect(resolveApiUser(apiRequest())).resolves.toEqual(dbUser);
+		expect(mockFindUnique).toHaveBeenCalledWith({
+			where: { clerkId: CLERK_ID },
+		});
+	});
+
+	it('rejects an invalid or revoked credential', async () => {
+		stubDualClerk({ isAuthenticated: false });
+
+		await expect(resolveApiUser(apiRequest())).rejects.toThrow('Unauthorized');
+		expect(mockFindUnique).not.toHaveBeenCalled();
+	});
+
+	it('rejects an org-scoped key, which authenticates with a null userId', async () => {
+		stubDualClerk({
+			isAuthenticated: true,
+			userId: null,
+			orgId: 'org_abc',
+		});
+
+		await expect(resolveApiUser(apiRequest())).rejects.toThrow('Unauthorized');
+		// Never reaches a lookup against a null clerkId.
+		expect(mockFindUnique).not.toHaveBeenCalled();
+	});
+
+	it('throws User not found when the credential resolves to no DB row', async () => {
+		stubDualClerk({ isAuthenticated: true, userId: CLERK_ID });
+		mockFindUnique.mockResolvedValue(null);
+
+		await expect(resolveApiUser(apiRequest())).rejects.toThrow(
+			'User not found',
+		);
+	});
+
+	it('does not consume the request body', async () => {
+		stubDualClerk({ isAuthenticated: true, userId: CLERK_ID });
+		mockFindUnique.mockResolvedValue(dbUser);
+
+		const request = new Request('https://example.test/api/v1/games', {
+			method: 'POST',
+			headers: { authorization: 'Bearer ak_live_key' },
+			body: JSON.stringify({ result: 'A' }),
+		});
+		await resolveApiUser(request);
+
+		expect(request.bodyUsed).toBe(false);
+		await expect(request.json()).resolves.toEqual({ result: 'A' });
 	});
 });

@@ -8,10 +8,13 @@ import { prisma } from '@/db';
 /**
  * Build a Clerk backend client from the environment.
  *
+ * Exported so every server-side Clerk call in the app (auth, API keys)
+ * constructs the client the same way.
+ *
  * `@clerk/backend` does not pick these up automatically —
  * `authenticateRequest` requires **both** keys passed explicitly.
  */
-function clerkClient() {
+export function clerkClient() {
 	const secretKey = process.env.CLERK_SECRET_KEY;
 	const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
 	if (!secretKey || !publishableKey) {
@@ -49,10 +52,45 @@ export async function authenticatedUser(request?: Request): Promise<User> {
 	const auth = await clerk.authenticateRequest(toAuthenticate);
 	// `isAuthenticated`, not the deprecated `isSignedIn` — it is the only
 	// discriminator present on both session and machine auth objects, so
-	// `resolveApiUser` can share this shape.
+	// `resolveApiUser` shares this shape.
 	if (!auth.isAuthenticated) throw new Error('Unauthorized');
 
-	const clerkId = auth.toAuth().userId;
+	return userForClerkId(auth.toAuth().userId);
+}
+
+/**
+ * Resolve the user behind an API request, accepting **either** credential:
+ * a Clerk session token (what the web app sends) or a personal API key
+ * (`Authorization: Bearer ak_…`, what scripts and mobile clients send).
+ *
+ * Both resolve to the same `User`, so everything downstream is identical
+ * regardless of which was presented — that is the whole point of the dual
+ * credential model.
+ *
+ * No prefix sniffing here on purpose: `acceptsToken` makes Clerk do the
+ * disambiguation, and listing the two types explicitly means an M2M or
+ * OAuth token is rejected rather than silently accepted. Service
+ * identities are an explicit non-goal of this feature.
+ */
+export async function resolveApiUser(request: Request): Promise<User> {
+	const clerk = clerkClient();
+
+	const auth = await clerk.authenticateRequest(request, {
+		acceptsToken: ['session_token', 'api_key'],
+	});
+	if (!auth.isAuthenticated) throw new Error('Unauthorized');
+
+	// An org-scoped API key authenticates successfully but carries no
+	// user — `{ userId: null, orgId: 'org_…' }`. This API is user-scoped
+	// only, so that is a 401, not a lookup against a null id.
+	const { userId } = auth.toAuth();
+	if (!userId) throw new Error('Unauthorized');
+
+	return userForClerkId(userId);
+}
+
+/** Load the `User` row behind a Clerk user id. */
+async function userForClerkId(clerkId: string): Promise<User> {
 	const dbUser = await prisma.user.findUnique({ where: { clerkId } });
 	if (!dbUser) throw new Error('User not found');
 	return dbUser;
