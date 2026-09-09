@@ -198,10 +198,14 @@ The Prisma MCP server is configured for this project and gives Claude Code direc
 `.mcp.json` is in `.gitignore` — **do not commit it**. It contains a local `DATABASE_URL`. Each developer (and Claude Code instance) needs their own copy. To set it up:
 
 ```bash
-claude mcp add --scope project prisma -- npx -y prisma@latest mcp
+claude mcp add --scope project prisma -- npx -y prisma@6 mcp
 ```
 
 Then add your local `DATABASE_URL` to the `env` block in the generated `.mcp.json`.
+
+**Keep the `prisma@6` pin — do not "update" it to `prisma@latest`.** The npm `latest` tag points at Prisma 8, a restructured CLI with no `mcp` command at all (it fails with `CLI.UNKNOWN_COMMAND: No command registered for 'mcp'`, which surfaces as a `CONNECT_TIMEOUT` / `CONNECTION_CLOSED` on startup and no Prisma tools for the session). Prisma replaced MCP with Agent Skills in v8. The pin should track whatever major the project's `prisma` dependency is on.
+
+MCP servers connect at session start, so after editing `.mcp.json` you must restart Claude Code for the change to take effect.
 
 ## Path Aliases
 
