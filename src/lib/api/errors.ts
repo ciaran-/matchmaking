@@ -1,5 +1,6 @@
 // Server-only module — do not import from client-side code.
 
+import * as Sentry from '@sentry/tanstackstart-react';
 import { type ApiErrorCode, jsonError } from '@/lib/api/respond';
 import { userFacingError } from '@/lib/user-facing-errors';
 
@@ -95,6 +96,11 @@ export function toErrorResponse(e: unknown, fallback: string): Response {
 	const rule = RULES.find((r) => r.matches(raw));
 
 	if (!rule) {
+		// Report explicitly. Sentry's automatic collection only sees
+		// *thrown* errors, and this function's whole job is to catch —
+		// so without this, every unmapped 500 would be invisible, and
+		// the "a loud 500 surfaces it" contract above would be a lie.
+		Sentry.captureException(e);
 		return jsonError('internal', userFacingError(e, fallback), 500);
 	}
 

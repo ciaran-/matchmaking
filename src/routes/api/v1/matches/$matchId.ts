@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { toErrorResponse } from '@/lib/api/errors';
+import { apiMiddleware } from '@/lib/api/middleware';
 import { jsonOk } from '@/lib/api/respond';
 import { serializeMatchState } from '@/lib/api/serialize';
 import { resolveApiUser } from '@/lib/auth';
@@ -16,6 +17,7 @@ import { getMatchState } from '@/lib/matchmaking/state';
  */
 export const Route = createFileRoute('/api/v1/matches/$matchId')({
 	server: {
+		middleware: [apiMiddleware],
 		handlers: {
 			GET: async ({ request, params }) => {
 				try {

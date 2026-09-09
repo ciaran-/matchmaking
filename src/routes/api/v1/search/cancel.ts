@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { toErrorResponse } from '@/lib/api/errors';
+import { apiMiddleware } from '@/lib/api/middleware';
 import { jsonOk } from '@/lib/api/respond';
 import { resolveApiUser } from '@/lib/auth';
 import { cancelSearch } from '@/lib/matchmaking/search';
@@ -16,6 +17,7 @@ import { cancelSearch } from '@/lib/matchmaking/search';
  */
 export const Route = createFileRoute('/api/v1/search/cancel')({
 	server: {
+		middleware: [apiMiddleware],
 		handlers: {
 			POST: async ({ request }) => {
 				try {

@@ -1,25 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { z } from 'zod';
 import { parseJsonBody } from '@/lib/api/body';
 import { toErrorResponse } from '@/lib/api/errors';
+import { apiMiddleware } from '@/lib/api/middleware';
 import { jsonOk } from '@/lib/api/respond';
+import { recordGameBody } from '@/lib/api/schemas';
 import { resolveApiUser } from '@/lib/auth';
 import { canActOnGame } from '@/lib/authorization';
 import { recordGame } from '@/lib/record-game';
-
-/**
- * Body schema for `POST /api/v1/games`, mirroring `RecordGameInput`
- * (`src/lib/record-game.ts`). Parsed at the edge with `safeParse` so the
- * handler receives typed, validated input — the lib core is not
- * re-validated. Per the conventions doc §5, a parse failure returns a
- * generic `bad_request`/400 message; zod's `issues` array is never
- * serialised into the response.
- */
-const recordGameBody = z.object({
-	playerAId: z.string(),
-	playerBId: z.string(),
-	result: z.enum(['A', 'B', 'draw']),
-});
 
 /**
  * `POST /api/v1/games` — record a game result.
@@ -39,6 +26,7 @@ const recordGameBody = z.object({
  */
 export const Route = createFileRoute('/api/v1/games')({
 	server: {
+		middleware: [apiMiddleware],
 		handlers: {
 			POST: async ({ request }) => {
 				try {

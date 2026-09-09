@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { toErrorResponse } from '@/lib/api/errors';
+import { apiMiddleware } from '@/lib/api/middleware';
 import { jsonOk } from '@/lib/api/respond';
 import { resolveApiUser } from '@/lib/auth';
 import { getLeagueActivity } from '@/lib/matchmaking/dashboard';
@@ -19,6 +20,7 @@ import { getLeagueActivity } from '@/lib/matchmaking/dashboard';
  */
 export const Route = createFileRoute('/api/v1/league/activity')({
 	server: {
+		middleware: [apiMiddleware],
 		handlers: {
 			GET: async ({ request }) => {
 				try {

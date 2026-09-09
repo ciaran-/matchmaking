@@ -2,6 +2,7 @@ import type { GameParticipant, GameResult } from '@prisma/client';
 import { createFileRoute } from '@tanstack/react-router';
 import { prisma } from '@/db';
 import { toErrorResponse } from '@/lib/api/errors';
+import { apiMiddleware } from '@/lib/api/middleware';
 import { jsonOk } from '@/lib/api/respond';
 import { serializeMatchState } from '@/lib/api/serialize';
 import { resolveApiUser } from '@/lib/auth';
@@ -31,6 +32,7 @@ type GameResultWithParticipants = GameResult & {
  */
 export const Route = createFileRoute('/api/v1/search')({
 	server: {
+		middleware: [apiMiddleware],
 		handlers: {
 			POST: async ({ request }) => {
 				try {
@@ -59,7 +61,7 @@ export const Route = createFileRoute('/api/v1/search')({
 							where: { userId: dbUser.id, matchId: { not: null } },
 							orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
 							select: { matchId: true },
-						})
+						});
 					const matchId = latestMatchedEvent?.matchId ?? null;
 
 					// Inline expiry only when the user is currently MATCHED — same
@@ -73,8 +75,8 @@ export const Route = createFileRoute('/api/v1/search')({
 					const match = matchId ? await getMatchState(matchId) : null;
 
 					let opponent: {
-						id: string
-						username: string
+						id: string;
+						username: string;
 						currentRating: number;
 					} | null = null;
 					let gameResult: GameResultWithParticipants | null = null;
@@ -85,13 +87,13 @@ export const Route = createFileRoute('/api/v1/search')({
 						opponent = await prisma.user.findUnique({
 							where: { id: opponentId },
 							select: { id: true, username: true, currentRating: true },
-						})
+						});
 
 						if (match.gameResultId) {
 							gameResult = await prisma.gameResult.findUnique({
 								where: { id: match.gameResultId },
 								include: { participants: true },
-							})
+							});
 						}
 					}
 
@@ -101,7 +103,7 @@ export const Route = createFileRoute('/api/v1/search')({
 						match: match ? serializeMatchState(match) : null,
 						opponent,
 						gameResult,
-					})
+					});
 				} catch (e) {
 					return toErrorResponse(e, "Couldn't load matchmaking status.");
 				}

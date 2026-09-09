@@ -1,17 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { z } from 'zod';
 import { prisma } from '@/db';
 import { parseJsonBody } from '@/lib/api/body';
 import { toErrorResponse } from '@/lib/api/errors';
+import { apiMiddleware } from '@/lib/api/middleware';
 import { jsonError, jsonOk } from '@/lib/api/respond';
+import {
+	matchResultBody as bodySchema,
+	matchIdParams as paramsSchema,
+} from '@/lib/api/schemas';
 import { serializeMatchState } from '@/lib/api/serialize';
 import { resolveApiUser } from '@/lib/auth';
 import type { EloResult } from '@/lib/elo';
 import { convertPendingGameToResult } from '@/lib/matchmaking/pending-game';
 import { getMatchState } from '@/lib/matchmaking/state';
-
-const paramsSchema = z.object({ matchId: z.string().uuid() });
-const bodySchema = z.object({ result: z.enum(['A', 'B', 'draw']) });
 
 /**
  * `POST /api/v1/matches/:matchId/result` — mirrors
@@ -43,6 +44,7 @@ const bodySchema = z.object({ result: z.enum(['A', 'B', 'draw']) });
  */
 export const Route = createFileRoute('/api/v1/matches/$matchId/result')({
 	server: {
+		middleware: [apiMiddleware],
 		handlers: {
 			POST: async ({ request, params }) => {
 				try {

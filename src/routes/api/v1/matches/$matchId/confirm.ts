@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { toErrorResponse } from '@/lib/api/errors';
+import { apiMiddleware } from '@/lib/api/middleware';
 import { jsonError, jsonOk } from '@/lib/api/respond';
 import { serializeMatchState } from '@/lib/api/serialize';
 import { resolveApiUser } from '@/lib/auth';
@@ -21,6 +22,7 @@ const paramsSchema = z.object({ matchId: z.string().uuid() });
  */
 export const Route = createFileRoute('/api/v1/matches/$matchId/confirm')({
 	server: {
+		middleware: [apiMiddleware],
 		handlers: {
 			POST: async ({ request, params }) => {
 				try {

@@ -264,7 +264,7 @@ Prove the whole stack — server route → validation → `resolveApiUser` → l
 
 ## T7 — Read endpoints (Checkpoint 2)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T6
 **Blocks:** T10
 **Parallel with:** T8, T9
@@ -291,7 +291,7 @@ Expose the existing read models as GETs, following T6's pattern exactly. No new 
 
 ## T8 — Game-result write endpoint (Checkpoint 3)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T6
 **Blocks:** T10
 **Parallel with:** T7, T9
@@ -324,7 +324,7 @@ HTTP integration: valid body records a game + returns rating changes; same-playe
 
 ## T9 — Matchmaking lifecycle endpoints (Checkpoint 4)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T6
 **Blocks:** T10
 **Parallel with:** T7, T8
@@ -363,7 +363,7 @@ HTTP integration reusing matchmaking scenarios (`twoSearchingPlayersAtEqualRatin
 
 ## T10 — Hardening: rate limiting, logging, OpenAPI (Checkpoint 5)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T7, T8, T9
 **Blocks:** nothing (ship)
 
