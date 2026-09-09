@@ -49,7 +49,7 @@ T1 → T2; T3 → T4 → T5; (T2, T5) → T6 → (T7, T8, T9) → T10.
 
 ## T1 — Mechanism spike + API conventions
 
-**Status:** pending
+**Status:** done
 **Depends on:** nothing
 **Blocks:** T2, T6
 **Parallel with:** T3
@@ -87,7 +87,7 @@ The plan defers the exact HTTP mechanism to this checkpoint. TanStack Start ship
 
 ## T2 — Extract shared auth helper (session-token path)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T1
 **Blocks:** T5, T6
 **Parallel with:** T3, T4
@@ -130,7 +130,7 @@ Mock `@clerk/backend` and `@tanstack/react-start/server` (per CLAUDE.md testing 
 
 ## T3 — Confirm Clerk native API-key surface
 
-**Status:** pending
+**Status:** done
 **Depends on:** nothing
 **Blocks:** T4
 **Parallel with:** T1, T2
@@ -156,7 +156,7 @@ The strategy is decided: **use Clerk's native, user-scoped API keys** (no self-m
 
 ## T4 — API-key issuance + revocation (Clerk wrappers)
 
-**Status:** pending
+**Status:** partial — lib wrappers done; web UI blocked on placement
 **Depends on:** T3
 **Blocks:** T5
 **Parallel with:** T2
@@ -194,7 +194,7 @@ Implement personal-API-key issuance, listing, and revocation as **thin wrappers 
 
 ## T5 — Dual-credential resolver
 
-**Status:** pending
+**Status:** done
 **Depends on:** T2, T4
 **Blocks:** T6
 **Parallel with:** nothing
