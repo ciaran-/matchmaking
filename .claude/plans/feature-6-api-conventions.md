@@ -169,6 +169,35 @@ would change.
   passing the handler's `request`.
 - Both modules carry the `// Server-only module` header.
 
+## 6b. Authorization
+
+Authentication answers *who is calling*; this answers *what they may touch*.
+All decisions go through `src/lib/authorization.ts` — never an inline check
+in a handler — so there is one place to read, test and extend.
+
+**The rule:** you may read or act on a game you are playing in. A user with
+`role: ADMIN` may act on anyone's. Anything else is `forbidden`/403.
+
+Applies to `GET /api/v1/matches/:matchId`, `POST /api/v1/games`, the
+matchmaking lifecycle actions (enforced inside the lib, which throws
+`not a participant`), and — importantly — the web app's `recordGameFn`.
+Enforcing at the API edge alone would have been cosmetic: both paths share
+the `recordGame` core, and the web dialog let any signed-in user record a
+game between any two players.
+
+**403 is checked before 404.** On `POST /api/v1/games` a caller who is not
+a participant gets 403 even when a player id does not exist, rather than a
+404 that would confirm whether some id is a real user. Do not "fix" this
+ordering — the participant check is deliberately an authorization gate in
+front of an existence oracle.
+
+**On future elevated roles.** `User.role` is a *global* grant: right for a
+system administrator, wrong for a tournament organiser whose authority is
+bounded by a tournament they own. Do not widen the enum to express scoped
+authority. When tournaments exist, add a grant table keyed by (user, scope)
+and consult it inside `canActOnGame` — call sites should not change, which
+is the point of routing every decision through that module.
+
 ## 7. Testing
 
 HTTP-level integration tests reuse `src/test/db.ts`, the factories, and

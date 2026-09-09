@@ -114,11 +114,9 @@ describe('POST /api/v1/games', () => {
 	});
 
 	it('records a game and returns 201 with rating changes', async () => {
-		await callerUser();
-		const playerA = await createUser(db.prisma, {
-			username: 'alice',
-			currentRating: 1000,
-		});
+		// The caller plays in the game — recording someone else's is
+		// covered in the authorization block below.
+		const playerA = await callerUser();
 		const playerB = await createUser(db.prisma, {
 			username: 'bob',
 			currentRating: 1000,
@@ -149,11 +147,10 @@ describe('POST /api/v1/games', () => {
 	});
 
 	it('returns 400 when playerAId equals playerBId, and does not record a game', async () => {
-		await callerUser();
-		const player = await createUser(db.prisma, { username: 'alice' });
+		const caller = await callerUser();
 
 		const { status, body } = await readJson<ApiErrorBody>(
-			await post({ playerAId: player.id, playerBId: player.id, result: 'A' }),
+			await post({ playerAId: caller.id, playerBId: caller.id, result: 'A' }),
 		);
 
 		expect(status).toBe(400);
@@ -164,12 +161,13 @@ describe('POST /api/v1/games', () => {
 	});
 
 	it('returns 404 when a player does not exist, and does not record a game', async () => {
-		await callerUser();
-		const playerA = await createUser(db.prisma, { username: 'alice' });
+		// The caller is a participant, so authorization passes and the
+		// lib's players-not-found is what surfaces.
+		const caller = await callerUser();
 
 		const { status, body } = await readJson<ApiErrorBody>(
 			await post({
-				playerAId: playerA.id,
+				playerAId: caller.id,
 				playerBId: 'nonexistent-user-id',
 				result: 'A',
 			}),
@@ -226,6 +224,73 @@ describe('POST /api/v1/games', () => {
 
 		expect(status).toBe(400);
 		expect(body.error.code).toBe('bad_request');
+	});
+
+	describe('authorization', () => {
+		it('returns 403 when the caller is not one of the two players', async () => {
+			await callerUser();
+			const playerA = await createUser(db.prisma, { username: 'alice' });
+			const playerB = await createUser(db.prisma, { username: 'bob' });
+
+			const { status, body } = await readJson<ApiErrorBody>(
+				await post({
+					playerAId: playerA.id,
+					playerBId: playerB.id,
+					result: 'A',
+				}),
+			);
+
+			expect(status).toBe(403);
+			expect(body.error.code).toBe('forbidden');
+			// And nothing was written.
+			expect(await db.prisma.gameResult.count()).toBe(0);
+		});
+
+		it('allows a player to record their own game', async () => {
+			const caller = await callerUser();
+			const opponent = await createUser(db.prisma, { username: 'bob' });
+
+			const { status } = await readJson(
+				await post({
+					playerAId: caller.id,
+					playerBId: opponent.id,
+					result: 'A',
+				}),
+			);
+
+			expect(status).toBe(201);
+			expect(await db.prisma.gameResult.count()).toBe(1);
+		});
+
+		it('allows an admin to record a game between two other players', async () => {
+			await createUser(db.prisma, {
+				clerkId: 'user_admin',
+				username: 'admin',
+				role: 'ADMIN',
+			});
+			stubClerkCredential(mockCreateClerkClient, {
+				kind: 'apiKey',
+				clerkUserId: 'user_admin',
+			});
+			const playerA = await createUser(db.prisma, { username: 'alice' });
+			const playerB = await createUser(db.prisma, { username: 'bob' });
+
+			const res = await callRoute(
+				POST,
+				apiRequest(URL, {
+					method: 'POST',
+					body: JSON.stringify({
+						playerAId: playerA.id,
+						playerBId: playerB.id,
+						result: 'A',
+					}),
+					credential: { kind: 'apiKey', clerkUserId: 'user_admin' },
+				}),
+			);
+
+			expect(res.status).toBe(201);
+			expect(await db.prisma.gameResult.count()).toBe(1);
+		});
 	});
 
 	it('never exposes email or Clerk ids in the response', async () => {

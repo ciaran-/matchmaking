@@ -63,6 +63,30 @@ async function callerUser() {
 	});
 }
 
+/**
+ * A PROPOSED match between two users. `withCaller` decides whether the
+ * authenticated caller is one of them — reads are scoped to
+ * participants, so most tests need it to be true.
+ */
+async function proposedMatch({ withCaller }: { withCaller: boolean }) {
+	const caller = await callerUser();
+	const other = await createUser(db.prisma, { username: 'bob' });
+	const playerA = withCaller
+		? caller
+		: await createUser(db.prisma, { username: 'alice' });
+
+	await appendMatchEvent(db.prisma, 'match-1', 'PROPOSED', {
+		playerAId: playerA.id,
+		playerBId: other.id,
+		playerARating: 1000,
+		playerBRating: 1050,
+		searchAAttemptId: 'sa-1',
+		searchBAttemptId: 'sb-1',
+	});
+
+	return { matchId: 'match-1', playerA, playerB: other };
+}
+
 describe('GET /api/v1/matches/:matchId', () => {
 	describe('authentication', () => {
 		it('returns 401 in the standard envelope for a missing or invalid credential', async () => {
@@ -101,16 +125,8 @@ describe('GET /api/v1/matches/:matchId', () => {
 		});
 
 		it('returns the derived match state for a proposed match', async () => {
-			await callerUser();
-			const userA = await createUser(db.prisma, { username: 'alice' });
-			const userB = await createUser(db.prisma, { username: 'bob' });
-			await appendMatchEvent(db.prisma, 'match-1', 'PROPOSED', {
-				playerAId: userA.id,
-				playerBId: userB.id,
-				playerARating: 1000,
-				playerBRating: 1050,
-				searchAAttemptId: 'sa-1',
-				searchBAttemptId: 'sb-1',
+			const { playerA: userA, playerB: userB } = await proposedMatch({
+				withCaller: true,
 			});
 
 			const { status, body } = await readJson<Record<string, unknown>>(
@@ -130,29 +146,62 @@ describe('GET /api/v1/matches/:matchId', () => {
 		});
 
 		it('serialises confirmedBy as an array, not an empty object', async () => {
-			await callerUser();
-			const userA = await createUser(db.prisma, { username: 'alice' });
-			const userB = await createUser(db.prisma, { username: 'bob' });
-			await appendMatchEvent(db.prisma, 'match-2', 'PROPOSED', {
-				playerAId: userA.id,
-				playerBId: userB.id,
-				playerARating: 1000,
-				playerBRating: 1050,
-				searchAAttemptId: 'sa-2',
-				searchBAttemptId: 'sb-2',
-			});
-			await appendMatchEvent(db.prisma, 'match-2', 'CONFIRMED_BY', {
+			// The caller must be in the match to read it, so match-1 from
+			// the helper is reused rather than building a second one.
+			const { playerA: userA } = await proposedMatch({ withCaller: true });
+			await appendMatchEvent(db.prisma, 'match-1', 'CONFIRMED_BY', {
 				actingPlayerId: userA.id,
 			});
 
 			const { body } = await readJson<{ confirmedBy: unknown }>(
-				await callRoute(GET, apiRequest(urlFor('match-2')), {
-					matchId: 'match-2',
+				await callRoute(GET, apiRequest(urlFor('match-1')), {
+					matchId: 'match-1',
 				}),
 			);
 
 			expect(Array.isArray(body.confirmedBy)).toBe(true);
 			expect(body.confirmedBy).toEqual([userA.id]);
+		});
+
+		describe('authorization', () => {
+			it('returns 403 when the caller is not in the match', async () => {
+				// A match is readable only by its players. The leaderboard
+				// endpoint exposes id + username, so an unscoped read here
+				// would reveal which named players met, and at what ratings.
+				await proposedMatch({ withCaller: false });
+				stubClerkCredential(mockCreateClerkClient, {
+					kind: 'apiKey',
+					clerkUserId: 'user_caller',
+				});
+
+				const { status, body } = await readJson<ApiErrorBody>(
+					await callRoute(GET, apiRequest(urlFor('match-1')), {
+						matchId: 'match-1',
+					}),
+				);
+
+				expect(status).toBe(403);
+				expect(body.error.code).toBe('forbidden');
+			});
+
+			it('allows an admin who is not in the match', async () => {
+				await proposedMatch({ withCaller: false });
+				await createUser(db.prisma, {
+					clerkId: 'user_admin',
+					username: 'admin',
+					role: 'ADMIN',
+				});
+				stubClerkCredential(mockCreateClerkClient, {
+					kind: 'apiKey',
+					clerkUserId: 'user_admin',
+				});
+
+				const res = await callRoute(GET, apiRequest(urlFor('match-1')), {
+					matchId: 'match-1',
+				});
+
+				expect(res.status).toBe(200);
+			});
 		});
 
 		it('serialises JSON with the right content type', async () => {

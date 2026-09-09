@@ -9,6 +9,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------- ENUMS ----------
+
+enum UserRole {
+  PLAYER
+  ADMIN
+}
+
 // ---------- MODELS ----------
 
 model User {
@@ -21,6 +28,15 @@ model User {
   username      String @unique
   // Live rating used for matchmaking & new games
   currentRating Int    @default(1000)
+
+  // Global authorisation role. PLAYER is the default and covers everyone
+  // acting only on their own games. ADMIN may act on any user's match.
+  //
+  // This column is deliberately *global*. Scoped elevation — e.g. a
+  // tournament organiser who may act only within their own tournament —
+  // does not belong here; it needs a grant table keyed by (user, scope)
+  // once tournaments exist. See src/lib/authorization.ts.
+  role          UserRole @default(PLAYER)
 
   // Relation to game participations
   gameParticipations GameParticipant[]

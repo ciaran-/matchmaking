@@ -31,11 +31,11 @@ import {
 	readJson,
 	stubClerkCredential,
 } from '@/test/http';
-import { Route as ConfirmRoute } from './matches.$matchId.confirm';
-import { Route as DeclineRoute } from './matches.$matchId.decline';
-import { Route as ResultRoute } from './matches.$matchId.result';
+import { Route as ConfirmRoute } from './matches/$matchId/confirm';
+import { Route as DeclineRoute } from './matches/$matchId/decline';
+import { Route as ResultRoute } from './matches/$matchId/result';
 import { Route as SearchRoute } from './search';
-import { Route as CancelRoute } from './search.cancel';
+import { Route as CancelRoute } from './search/cancel';
 
 const mockCreateClerkClient = vi.mocked(createClerkClient);
 

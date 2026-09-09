@@ -1,4 +1,4 @@
-import type { PrismaClient, User } from '@prisma/client';
+import type { PrismaClient, User, UserRole } from '@prisma/client';
 
 let counter = 0;
 
@@ -7,6 +7,7 @@ interface UserOverrides {
 	email?: string;
 	username?: string;
 	currentRating?: number;
+	role?: UserRole;
 }
 
 export async function createUser(
@@ -20,6 +21,7 @@ export async function createUser(
 			email: overrides.email ?? `testuser${counter}@test.local`,
 			username: overrides.username ?? `testuser${counter}`,
 			currentRating: overrides.currentRating ?? 1000,
+			role: overrides.role ?? 'PLAYER',
 		},
 	});
 }

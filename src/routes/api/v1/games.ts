@@ -4,6 +4,7 @@ import { parseJsonBody } from '@/lib/api/body';
 import { toErrorResponse } from '@/lib/api/errors';
 import { jsonOk } from '@/lib/api/respond';
 import { resolveApiUser } from '@/lib/auth';
+import { canActOnGame } from '@/lib/authorization';
 import { recordGame } from '@/lib/record-game';
 
 /**
@@ -41,10 +42,16 @@ export const Route = createFileRoute('/api/v1/games')({
 		handlers: {
 			POST: async ({ request }) => {
 				try {
-					await resolveApiUser(request);
+					const user = await resolveApiUser(request);
 
 					const body = await parseJsonBody(request, recordGameBody);
 					if (!body.ok) return body.response;
+
+					// You may only record a game you played in; admins may
+					// record anyone's.
+					if (!canActOnGame(user, body.data)) {
+						throw new Error('You are not a participant in this match');
+					}
 
 					const output = await recordGame(body.data);
 					return jsonOk(output, 201);
