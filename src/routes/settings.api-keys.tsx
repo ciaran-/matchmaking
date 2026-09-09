@@ -75,7 +75,8 @@ function ApiKeysSettings() {
 					<code className="text-cyan-300">
 						Authorization: Bearer &lt;key&gt;
 					</code>
-					.
+					. Revoking a key takes up to a minute to take effect, so treat a
+					leaked key as live until then.
 				</p>
 				<SignInGate>
 					<ApiKeyManager />
@@ -234,7 +235,9 @@ function ApiKeyManager() {
 							<span className="text-slate-500 text-sm">Revoked</span>
 						) : confirmingRevokeId === key.id ? (
 							<div className="flex items-center gap-2">
-								<span className="text-slate-300 text-sm">Revoke it?</span>
+								<span className="text-slate-300 text-sm">
+									Revoke it? It may keep working for up to a minute.
+								</span>
 								<Button
 									variant="danger"
 									size="small"

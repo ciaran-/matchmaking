@@ -229,6 +229,37 @@ the user-scoped keys this feature issues, or an org id. `APIKey` fields:
 and `revocationReason`, so a revoked key stays auditable and listable via
 `includeInvalid: true`. `delete` destroys the record. T4 uses `revoke`.
 
+### Revocation is not immediate (measured, T6)
+
+**A revoked key keeps authenticating for up to ~60 seconds**, but only if
+it was verified shortly before being revoked. Measured against our live
+instance:
+
+| Sequence | Result |
+| --- | --- |
+| mint → revoke → `verify` | rejects immediately |
+| mint → `verify` → revoke → `verify` | still accepted; rejects at ~60s |
+
+`apiKeys.get(id)` reports `revoked: true` the instant the revoke returns,
+so the revocation is recorded immediately — it is the *verification* path
+that serves a stale result. There is no client-side cache in
+`@clerk/backend`, so this is server-side at Clerk, with roughly a 60s TTL
+on a successful verification.
+
+The warmed sequence is the realistic one: a key gets revoked precisely
+because it is in use. Treat ~60s as the real revocation window.
+
+**Decision: accept the window and say so.** The API-keys page tells the
+user revocation takes up to a minute, so a leaked key is treated as live
+until then. This matches how GitHub PATs and cloud access keys behave.
+
+The alternative — re-checking `apiKeys.get(keyId)` after every successful
+`authenticateRequest` — closes the window but adds a Clerk round trip to
+*every authenticated API request*, which is the wrong trade at our target
+scale. Revisit only if a stricter revocation guarantee is actually
+required; if so, scope the extra check to sensitive write endpoints rather
+than applying it globally.
+
 **`getSecret` exists.** Contrary to the SDK's own docstring on `.secret`
 ("cannot be retrieved later"), the raw secret *is* retrievable from the
 backend API. Our policy is unchanged and deliberate: we never call
