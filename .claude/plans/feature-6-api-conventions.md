@@ -153,3 +153,81 @@ HTTP-level integration tests reuse `src/test/db.ts`, the factories, and
 established in T6 and copied by T7–T9. Tests assert status code, envelope
 conformance, auth rejection, and DB effect — not the lib business logic,
 which is already covered.
+
+---
+
+## 8. API key integration (T3)
+
+Verified against the installed `@clerk/backend@3.2.14`. Types:
+`dist/api/endpoints/APIKeysApi.d.ts`, `dist/api/resources/APIKey.d.ts`,
+`dist/tokens/authObjects.d.ts`, `dist/tokens/machine.d.ts`.
+
+**Enablement: confirmed.** A read-only probe against our instance on
+2026-09-09 (`clerk.apiKeys.list({ subject })` for a real user) returned
+200 with `totalCount: 0`. The feature is live on our plan; T4 is unblocked.
+
+### Client surface
+
+The client exposes `clerk.apiKeys` (`APIKeysAPI`):
+
+| Call | Returns |
+| --- | --- |
+| `apiKeys.create({ name, subject, description?, claims?, scopes?, createdBy?, secondsUntilExpiration? })` | `APIKey` — **the only response carrying `.secret`** |
+| `apiKeys.list({ subject, includeInvalid?, limit?, offset? })` | `{ data: APIKey[], totalCount }` |
+| `apiKeys.get(apiKeyId)` | `APIKey` |
+| `apiKeys.revoke({ apiKeyId, revocationReason? })` | `APIKey` (`revoked: true`) |
+| `apiKeys.delete(apiKeyId)` | `DeletedObject` |
+| `apiKeys.update({ apiKeyId, subject, ... })` | `APIKey` |
+| `apiKeys.verify(secret)` | `APIKey` |
+| `apiKeys.getSecret(apiKeyId)` | `{ secret }` |
+
+`subject` is the owner id — a Clerk **user** id (`user_…`, 32 chars) for
+the user-scoped keys this feature issues, or an org id. `APIKey` fields:
+`id`, `type` (`'api_key'`), `name`, `subject`, `scopes`, `claims`,
+`revoked`, `revocationReason`, `expired`, `expiration`, `createdBy`,
+`description`, `lastUsedAt`, `createdAt`, `updatedAt`, `secret?`.
+
+**Revoke, don't delete.** `revoke` preserves the row with `revoked: true`
+and `revocationReason`, so a revoked key stays auditable and listable via
+`includeInvalid: true`. `delete` destroys the record. T4 uses `revoke`.
+
+**`getSecret` exists.** Contrary to the SDK's own docstring on `.secret`
+("cannot be retrieved later"), the raw secret *is* retrievable from the
+backend API. Our policy is unchanged and deliberate: we never call
+`getSecret`, never persist the raw value, never log it, and keep the
+show-once-at-creation contract in the UI.
+
+### Key vs session disambiguation — do not hand-roll it
+
+The prefix rule exists (`API_KEY_PREFIX = 'ak_'`; session tokens are JWTs,
+matched by `isJwtFormat`) — but **the SDK already branches for us**:
+
+```ts
+const auth = await clerk.authenticateRequest(request, {
+	acceptsToken: ['session_token', 'api_key'],
+});
+if (!auth.isAuthenticated) throw new Error('Unauthorized');
+const { tokenType, userId } = auth.toAuth();
+```
+
+This supersedes the manual prefix-branching described in T5 of the task
+list. One call resolves either credential; `tokenType` is
+`'session_token' | 'api_key'` and `userId` is the Clerk user id in both
+cases. T5 becomes a thin wrapper, not a dispatcher.
+
+Two consequences for T2/T5:
+
+- **`isSignedIn` is deprecated** in this SDK version in favour of
+  `isAuthenticated`, which is the only discriminator present on *both*
+  session and machine auth objects. The extracted helper uses
+  `isAuthenticated`; the current inline copies use `isSignedIn`.
+- **Org-scoped keys must be rejected.** For an `api_key` token the auth
+  object is either `{ userId: string, orgId: null }` or
+  `{ userId: null, orgId: string }`. This feature is user-scoped only (see
+  the plan's non-goals), so a null `userId` is an `unauthorized`/401, not
+  a crash on a null lookup.
+
+Machine-to-machine tokens (`mt_`) and OAuth tokens (`oat_`) are also
+supported by `acceptsToken` — deliberately **not** included. Service
+identities are an explicit non-goal; leaving them out of the accept list
+means an M2M token is rejected rather than silently resolving to nobody.
