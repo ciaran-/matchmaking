@@ -6,6 +6,16 @@ import { getRequest } from '@tanstack/react-start/server';
 import { prisma } from '@/db';
 
 /**
+ * A `User` that is definitionally Clerk-backed.
+ *
+ * `User.clerkId` is nullable in the schema (seed and legacy rows have
+ * none), but a user resolved *by* clerkId always has one. Narrowing it
+ * here spares every caller a redundant null check before handing the id
+ * back to Clerk.
+ */
+export type AuthenticatedUser = User & { clerkId: string };
+
+/**
  * Build a Clerk backend client from the environment.
  *
  * Exported so every server-side Clerk call in the app (auth, API keys)
@@ -40,7 +50,9 @@ export function clerkClient() {
  * Throws on missing env, missing/invalid credentials, or if the Clerk
  * user has no matching `User` row.
  */
-export async function authenticatedUser(request?: Request): Promise<User> {
+export async function authenticatedUser(
+	request?: Request,
+): Promise<AuthenticatedUser> {
 	const clerk = clerkClient();
 
 	let toAuthenticate = request;
@@ -72,7 +84,9 @@ export async function authenticatedUser(request?: Request): Promise<User> {
  * OAuth token is rejected rather than silently accepted. Service
  * identities are an explicit non-goal of this feature.
  */
-export async function resolveApiUser(request: Request): Promise<User> {
+export async function resolveApiUser(
+	request: Request,
+): Promise<AuthenticatedUser> {
 	const clerk = clerkClient();
 
 	const auth = await clerk.authenticateRequest(request, {
@@ -90,8 +104,9 @@ export async function resolveApiUser(request: Request): Promise<User> {
 }
 
 /** Load the `User` row behind a Clerk user id. */
-async function userForClerkId(clerkId: string): Promise<User> {
+async function userForClerkId(clerkId: string): Promise<AuthenticatedUser> {
 	const dbUser = await prisma.user.findUnique({ where: { clerkId } });
 	if (!dbUser) throw new Error('User not found');
-	return dbUser;
+	// Looked up by a non-null clerkId, so the row carries it.
+	return dbUser as AuthenticatedUser;
 }

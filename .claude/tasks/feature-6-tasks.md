@@ -156,7 +156,7 @@ The strategy is decided: **use Clerk's native, user-scoped API keys** (no self-m
 
 ## T4 — API-key issuance + revocation (Clerk wrappers)
 
-**Status:** partial — lib wrappers done; web UI blocked on placement
+**Status:** done — web surface at `/settings/api-keys`
 **Depends on:** T3
 **Blocks:** T5
 **Parallel with:** T2
