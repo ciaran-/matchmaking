@@ -42,6 +42,17 @@ describe('toErrorResponse', () => {
 		expect(mapped.code).toBe('forbidden');
 	});
 
+	it('maps cancelSearch with nothing active to 409, not 500 (T9)', async () => {
+		const mapped = await map(
+			new Error(
+				'No active search to cancel for user u1 (latest event is terminal or no events exist)',
+			),
+		);
+
+		expect(mapped.status).toBe(409);
+		expect(mapped.code).toBe('conflict');
+	});
+
 	it('maps a genuine missing resource to 404', async () => {
 		const mapped = await map(
 			new Error('confirmPendingGame: match m1 not found'),
