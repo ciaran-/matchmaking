@@ -50,6 +50,19 @@ const RULES: Rule[] = [
 		status: 403,
 	},
 	{
+		// `cancelSearch` (T9): "No active search to cancel for user X
+		// (latest event is terminal or no events exist)". Doesn't say
+		// "already terminal" like the pending-game throws, so it needs its
+		// own rule — without it this fell through to 500. Either half of
+		// the message (no search ever started, or it already ended) is a
+		// state conflict from the caller's point of view: there's nothing
+		// active to cancel.
+		matches: (m) => m.includes('No active search to cancel'),
+		code: 'conflict',
+		status: 409,
+		message: 'You have no active search to cancel.',
+	},
+	{
 		matches: (m) => m.includes('must be different'),
 		code: 'bad_request',
 		status: 400,
