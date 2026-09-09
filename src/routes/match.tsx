@@ -1,15 +1,14 @@
-import { createClerkClient } from '@clerk/backend';
 import { useUser } from '@clerk/clerk-react';
 import type { GameParticipant, GameResult } from '@prisma/client';
 import * as Sentry from '@sentry/tanstackstart-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
 import { useEffect, useMemo, useState } from 'react';
 import { LeagueActivity } from '@/components/LeagueActivity';
 import { SignInGate } from '@/components/SignInGate';
 import { prisma } from '@/db';
+import { authenticatedUser } from '@/lib/auth';
 import type { EloResult } from '@/lib/elo';
 import { getLeagueActivity } from '@/lib/matchmaking/dashboard';
 import {
@@ -31,42 +30,6 @@ import { userFacingError } from '@/lib/user-facing-errors';
 type GameResultWithParticipants = GameResult & {
 	participants: GameParticipant[];
 };
-
-/**
- * Resolve the authenticated user for the current request. Performs the
- * full Clerk auth dance (mirroring `recordGameFn` in `league.tsx`) and
- * loads the corresponding `User` row from the database.
- *
- * Throws on missing env, missing/invalid Clerk credentials, or if the
- * Clerk user has no matching `User` row.
- *
- * Defined as a local helper rather than a separate module to keep the
- * Clerk integration colocated with its only callers (the six server
- * functions below). All callers run inside `Sentry.startSpan`, so this
- * helper itself does not need its own span wrapper.
- */
-async function authenticatedUser() {
-	const secretKey = process.env.CLERK_SECRET_KEY;
-	const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
-	if (!secretKey || !publishableKey) {
-		throw new Error('Missing Clerk env vars');
-	}
-
-	const clerk = createClerkClient({ secretKey, publishableKey });
-	// Headers-only clone — TanStack Start has already consumed the original
-	// request body to deserialize the server function arguments. See
-	// `recordGameFn` in `src/routes/league.tsx`.
-	const req = getRequest();
-	const auth = await clerk.authenticateRequest(
-		new Request(req.url, { headers: req.headers }),
-	);
-	if (!auth.isSignedIn) throw new Error('Unauthorized');
-
-	const clerkId = auth.toAuth().userId;
-	const dbUser = await prisma.user.findUnique({ where: { clerkId } });
-	if (!dbUser) throw new Error('User not found');
-	return dbUser;
-}
 
 /**
  * Enter the matchmaking queue. Idempotent for the same user — see
