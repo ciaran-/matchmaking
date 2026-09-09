@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
+import { parseJsonBody } from '@/lib/api/body';
 import { toErrorResponse } from '@/lib/api/errors';
-import { jsonError, jsonOk } from '@/lib/api/respond';
+import { jsonOk } from '@/lib/api/respond';
 import { resolveApiUser } from '@/lib/auth';
 import { recordGame } from '@/lib/record-game';
 
@@ -42,12 +43,10 @@ export const Route = createFileRoute('/api/v1/games')({
 				try {
 					await resolveApiUser(request);
 
-					const parsed = recordGameBody.safeParse(await request.json());
-					if (!parsed.success) {
-						return jsonError('bad_request', 'Invalid request body.', 400);
-					}
+					const body = await parseJsonBody(request, recordGameBody);
+					if (!body.ok) return body.response;
 
-					const output = await recordGame(parsed.data);
+					const output = await recordGame(body.data);
 					return jsonOk(output, 201);
 				} catch (e) {
 					return toErrorResponse(e, "Couldn't record the game.");

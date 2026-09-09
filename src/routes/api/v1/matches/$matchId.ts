@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { toErrorResponse } from '@/lib/api/errors';
 import { jsonOk } from '@/lib/api/respond';
+import { serializeMatchState } from '@/lib/api/serialize';
 import { resolveApiUser } from '@/lib/auth';
 import { getMatchState } from '@/lib/matchmaking/state';
 
@@ -9,11 +10,8 @@ import { getMatchState } from '@/lib/matchmaking/state';
  * proposal. 404 when no `PROPOSED` event exists for the id (unknown or
  * never-created match).
  *
- * `confirmedBy` comes back from `getMatchState` as a `Set<string>`,
- * which `JSON.stringify` (and so `Response.json`/`jsonOk`) serialises
- * as `{}` — silently dropping its contents. Translating it to an array
- * here is wire serialisation, not business logic, so it belongs in this
- * adapter rather than in `src/lib/matchmaking/state.ts`.
+ * Serialised via `serializeMatchState` — see that helper for why
+ * `confirmedBy` cannot go to the wire as-is.
  */
 export const Route = createFileRoute('/api/v1/matches/$matchId')({
 	server: {
@@ -25,7 +23,7 @@ export const Route = createFileRoute('/api/v1/matches/$matchId')({
 					if (!match) {
 						throw new Error(`Match ${params.matchId} not found`);
 					}
-					return jsonOk({ ...match, confirmedBy: [...match.confirmedBy] });
+					return jsonOk(serializeMatchState(match));
 				} catch (e) {
 					return toErrorResponse(e, "Couldn't load that match.");
 				}

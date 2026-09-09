@@ -72,7 +72,21 @@ is added to an endpoint, that endpoint moves to `{ data, page }` as a
 documented breaking change within `v1` or waits for `v2`.
 
 Status codes: `200` reads, `201` for creates that produce a resource
-(`POST /api/v1/games`), `204` for successful actions with no body.
+(`POST /api/v1/games`, `POST /api/v1/matches/:id/result` — it creates a
+`GameResult`), `204` for successful actions with no body.
+
+**Idempotent state-transition actions return `200`**, not `201`, and
+return the updated resource: start/cancel search, confirm, decline. They
+move an existing thing through a state machine rather than creating one.
+
+**A nullable single resource is `200` with a bare `null` body, not a
+`404`.** "You have no active search" is a successful answer to a valid
+question — `GET /api/v1/me/search` returns `null`, matching the lib's own
+return and the shape the web app already receives. Reserve `404` for an
+identifier that names nothing: `GET /api/v1/matches/:matchId` where the
+id is unknown. The distinction is *asked about a specific thing that
+doesn't exist* (404) versus *asked about your current state and it's
+empty* (200 + null).
 
 ## 4. Error envelope
 
@@ -130,8 +144,17 @@ would change.
 - One `zod` schema per endpoint, defined in the route file, applied at the
   edge. The handler receives parsed, typed input; `src/lib/` stays trusting
   of its callers and is not re-validated.
-- Body: `schema.safeParse(await request.json())`. Query/path params parse
-  the same way.
+- Body: **always via `parseJsonBody(request, schema, message?)`** from
+  `src/lib/api/body.ts` — never `schema.safeParse(await request.json())`
+  inline. `request.json()` *throws* on a non-JSON body, so parsing it
+  inside a handler's main `try` maps a client mistake to `internal`/500.
+  The helper returns `bad_request`/400 for both a malformed body and a
+  schema mismatch. Query/path params parse with `safeParse` directly —
+  they cannot throw.
+- Derived matchmaking state goes to the wire via `serializeMatchState`
+  from `src/lib/api/serialize.ts`. `DerivedMatchState.confirmedBy` is a
+  `Set`, which `JSON.stringify` silently renders as `{}`, dropping every
+  value.
 - A `safeParse` failure maps to `bad_request`/400 with a generic message —
   **do not** serialise zod's `issues` array into the response; it exposes
   internal field naming. Log the detail, return the summary.

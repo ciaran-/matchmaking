@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import { prisma } from '@/db';
+import { parseJsonBody } from '@/lib/api/body';
 import { toErrorResponse } from '@/lib/api/errors';
 import { jsonError, jsonOk } from '@/lib/api/respond';
 import { serializeMatchState } from '@/lib/api/serialize';
@@ -50,24 +51,16 @@ export const Route = createFileRoute('/api/v1/matches/$matchId/result')({
 						return jsonError('bad_request', 'Invalid match id.', 400);
 					}
 
-					let rawBody: unknown;
-					try {
-						rawBody = await request.json();
-					} catch {
-						return jsonError('bad_request', 'Invalid JSON body.', 400);
-					}
-					const parsedBody = bodySchema.safeParse(rawBody);
-					if (!parsedBody.success) {
-						return jsonError(
-							'bad_request',
-							'Body must be { result: "A" | "B" | "draw" }.',
-							400,
-						);
-					}
+					const body = await parseJsonBody(
+						request,
+						bodySchema,
+						'Body must be { result: "A" | "B" | "draw" }.',
+					);
+					if (!body.ok) return body.response;
 
 					const dbUser = await resolveApiUser(request);
 					const { matchId } = parsedParams.data;
-					const reported = parsedBody.data.result as EloResult;
+					const reported = body.data.result as EloResult;
 
 					const matchState = await getMatchState(matchId);
 					const matchPerspectiveResult: EloResult =

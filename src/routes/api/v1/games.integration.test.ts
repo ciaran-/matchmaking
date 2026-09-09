@@ -78,6 +78,17 @@ function post(body: unknown) {
 	);
 }
 
+function postRaw(body?: string) {
+	return callRoute(
+		POST,
+		apiRequest(URL, {
+			method: 'POST',
+			body,
+			credential: { kind: 'apiKey', clerkUserId: 'user_caller' },
+		}),
+	);
+}
+
 describe('POST /api/v1/games', () => {
 	beforeEach(() => {
 		stubClerkCredential(mockCreateClerkClient, {
@@ -190,6 +201,31 @@ describe('POST /api/v1/games', () => {
 		// serialised into the response.
 		expect(JSON.stringify(body)).not.toContain('issues');
 		expect(JSON.stringify(body)).not.toContain('invalid_enum_value');
+	});
+
+	// Regression: `request.json()` throws on a non-JSON body. Parsing it
+	// inside the handler's main try mapped that throw to internal/500 —
+	// blaming us for the caller's malformed input, and (per the
+	// conventions doc, where every unmapped 500 is a bug signal) burying
+	// real defects in Sentry noise.
+	it('returns 400, not 500, for a body that is not JSON', async () => {
+		await callerUser();
+
+		const { status, body } = await readJson<ApiErrorBody>(
+			await postRaw('this is not json'),
+		);
+
+		expect(status).toBe(400);
+		expect(body.error.code).toBe('bad_request');
+	});
+
+	it('returns 400, not 500, for an empty body', async () => {
+		await callerUser();
+
+		const { status, body } = await readJson<ApiErrorBody>(await postRaw());
+
+		expect(status).toBe(400);
+		expect(body.error.code).toBe('bad_request');
 	});
 
 	it('never exposes email or Clerk ids in the response', async () => {
