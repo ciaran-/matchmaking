@@ -1,9 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import { MatchHistory } from '@/components/MatchHistory';
+import { RatingChart } from '@/components/RatingChart';
 import { SignInGate } from '@/components/SignInGate';
 import { authenticatedUser } from '@/lib/auth';
+import { getPlayerMatchHistory } from '@/lib/player-match-history';
 import { getPlayerProfile, type PlayerProfile } from '@/lib/player-profile';
+import { getPlayerRatingHistory } from '@/lib/player-rating-history';
 import { userFacingError } from '@/lib/user-facing-errors';
 
 /**
@@ -15,6 +19,20 @@ const getPlayerProfileFn = createServerFn({ method: 'POST' })
 	.handler(async ({ data }) => {
 		await authenticatedUser();
 		return getPlayerProfile(data.username);
+	});
+
+const getMatchHistoryFn = createServerFn({ method: 'POST' })
+	.inputValidator((data: { username: string; cursor?: string }) => data)
+	.handler(async ({ data }) => {
+		await authenticatedUser();
+		return getPlayerMatchHistory(data.username, { cursor: data.cursor });
+	});
+
+const getRatingHistoryFn = createServerFn({ method: 'POST' })
+	.inputValidator((data: { username: string }) => data)
+	.handler(async ({ data }) => {
+		await authenticatedUser();
+		return getPlayerRatingHistory(data.username);
 	});
 
 export const Route = createFileRoute('/player/$username')({
@@ -61,9 +79,53 @@ function ProfileLoader({ username }: { username: string }) {
 	}
 
 	return profileQuery.data ? (
-		<PlayerDetail profile={profileQuery.data} />
+		<div className="flex flex-col gap-12">
+			<PlayerDetail profile={profileQuery.data} />
+			<RatingSection username={username} />
+			<MatchHistorySection username={username} />
+		</div>
 	) : (
 		<NotFound username={username} />
+	);
+}
+
+function RatingSection({ username }: { username: string }) {
+	const ratingsQuery = useQuery({
+		queryKey: ['playerRatings', username],
+		queryFn: () => getRatingHistoryFn({ data: { username } }),
+	});
+
+	return (
+		<RatingChart
+			history={ratingsQuery.data ?? undefined}
+			isLoading={ratingsQuery.isPending}
+			error={ratingsQuery.error ?? undefined}
+		/>
+	);
+}
+
+function MatchHistorySection({ username }: { username: string }) {
+	// Infinite rather than a single page: the lib returns an opaque
+	// `nextCursor`, which is exactly the shape useInfiniteQuery expects.
+	const historyQuery = useInfiniteQuery({
+		queryKey: ['playerMatches', username],
+		queryFn: ({ pageParam }) =>
+			getMatchHistoryFn({ data: { username, cursor: pageParam } }),
+		initialPageParam: undefined as string | undefined,
+		getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
+	});
+
+	const rows = historyQuery.data?.pages.flatMap((page) => page?.data ?? []);
+
+	return (
+		<MatchHistory
+			rows={historyQuery.isPending ? undefined : (rows ?? [])}
+			isLoading={historyQuery.isPending}
+			error={historyQuery.error ?? undefined}
+			hasMore={historyQuery.hasNextPage}
+			onLoadMore={() => historyQuery.fetchNextPage()}
+			isLoadingMore={historyQuery.isFetchingNextPage}
+		/>
 	);
 }
 

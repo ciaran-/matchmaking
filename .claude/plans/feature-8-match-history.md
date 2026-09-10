@@ -72,3 +72,28 @@ and a thin server-fn wrapper. Rendered as a section on the profile page.
 - Index check: is `GameParticipant(userId)` + `GameResult.createdAt`
   ordering efficient, or is a composite index warranted? Measure before
   adding.
+
+
+## Measured scaling finding (2026-09-10, not acted on)
+
+`EXPLAIN ANALYZE` against a seeded database — 500 users, ~15,300 `ONE_VS_ONE`
+games, and one player whose 300 games were all inserted *before* 15,000 games
+of later league traffic — showed Postgres scanning ~15,021 rows (~24ms) to
+return a page of 20.
+
+It drives the query from `GameResult_mode_createdAt_idx` backwards and
+nested-loop-probes `GameParticipant`, rather than starting from the selective
+`GameParticipant(userId)` index. Rephrasing the query to lead from
+`GameParticipant` produced an **identical** physical plan, so this is not
+fixable by rewriting it.
+
+**The cost therefore scales with total league volume since that player's most
+recent game, not with their own history size.** A dormant or new player is the
+worst case, and it gets worse as the league grows — the opposite of the
+intuition that light users are cheap.
+
+Fine at current volume. The candidate fix is denormalising `createdAt` onto
+`GameParticipant` and indexing `[userId, createdAt]` to give a genuine
+per-user access path. Deliberately not done: it is a migration plus a write-path
+change, and it should be validated against real traffic rather than a
+synthetic worst case.
