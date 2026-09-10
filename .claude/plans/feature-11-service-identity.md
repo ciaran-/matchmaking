@@ -174,24 +174,18 @@ determines whether this is a live exposure or a latent one.
 Then give the tick a real credential instead of relying on platform
 routing, so its authorisation is a property of our code.
 
-### Checkpoint 3 — Batch import of offline games
-The originating use case. **Three problems here are not authentication and
-need designing on their own merits:**
+### Checkpoint 3 — *(spun out)*
 
-- **Elo is order-dependent.** Replaying historical games in submission
-  order rather than played order produces different final ratings,
-  silently. The import needs an explicit played-at ordering and must apply
-  games in it.
-- **Idempotency.** `recordGame` has no idempotency key. A retried or
-  partially-failed import would double-apply rating changes and corrupt
-  the ladder. Needs a natural key or an import batch id.
-- **Backdating.** `createdAt` drives the activity dashboard and its
-  "last 24h" window. Imported games stamped `now` would distort it. The
-  test factory already supports a `createdAt` override, so the shape is
-  anticipated; the API is not.
+Batch import of offline games is now
+**`.claude/plans/feature-12-offline-game-import.md`**. It is a feature in
+its own right rather than a checkpoint of an auth change: its hard parts
+— Elo's order-dependence, idempotency, and backdating — have nothing to
+do with authentication, and bundling them here would have hidden three
+design decisions inside a security change.
 
-A partial import that leaves ratings half-applied is worse than a rejected
-one — prefer all-or-nothing per batch.
+It remains the first concrete caller that authenticates as the system,
+and therefore the thing that decides feature 11's deferred credential
+question.
 
 ## Testing
 
