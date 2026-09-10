@@ -69,6 +69,14 @@ const RULES: Rule[] = [
 		status: 400,
 	},
 	{
+		// `getPlayerMatchHistory` (feature 8): a cursor that doesn't decode
+		// to a valid sort key. Client-supplied bad input, not our bug.
+		matches: (m) => m === 'Invalid cursor',
+		code: 'bad_request',
+		status: 400,
+		message: 'Invalid pagination cursor.',
+	},
+	{
 		matches: (m) =>
 			m.includes('already terminal') ||
 			m.includes('not BOTH_CONFIRMED') ||

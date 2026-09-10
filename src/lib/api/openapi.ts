@@ -187,6 +187,45 @@ export function buildOpenApiSpec() {
 					},
 				},
 			},
+			'/players/{username}/matches': {
+				get: {
+					summary: "A player's completed match history, newest first.",
+					description:
+						'Readable by any authenticated caller, same as the profile ' +
+						'endpoint. 1v1 only — TEAM_VS_TEAM games are excluded, since ' +
+						'opponent resolution assumes exactly two participants.',
+					parameters: [
+						{
+							name: 'username',
+							in: 'path',
+							required: true,
+							schema: { type: 'string' },
+						},
+						{
+							name: 'cursor',
+							in: 'query',
+							required: false,
+							description: 'An opaque token from a previous page’s nextCursor.',
+							schema: { type: 'string' },
+						},
+						{
+							name: 'limit',
+							in: 'query',
+							required: false,
+							description: 'Page size, 1–50. Defaults to 20.',
+							schema: { type: 'integer', minimum: 1, maximum: 50 },
+						},
+					],
+					responses: {
+						'200': {
+							description: 'A page of match history: { data, nextCursor }.',
+						},
+						'400': errorResponse,
+						'404': errorResponse,
+						...commonResponses,
+					},
+				},
+			},
 			'/games': {
 				post: {
 					summary: 'Record a completed game.',
