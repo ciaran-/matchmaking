@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/db';
 import { countOutcomes, NO_GAMES } from '@/lib/game-outcome';
 import type { DbClient } from '@/lib/matchmaking/state';
+import { DEFAULT_PAGE_SIZE } from '@/lib/pagination';
 
 /**
  * One row of the league table, already derived and free of anything
@@ -37,7 +38,6 @@ export type LeaderboardOptions = {
 	search?: string;
 };
 
-export const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
 
 /**
@@ -159,10 +159,23 @@ export async function getPlayerRank(
 	return higherRated + 1;
 }
 
-/** The 1-based page a given rank falls on. */
-export function pageForRank(
-	rank: number,
-	pageSize: number = DEFAULT_PAGE_SIZE,
-): number {
-	return Math.max(1, Math.ceil(rank / pageSize));
+/**
+ * Every player, as `{ id, username }`, for the record-game picker.
+ *
+ * Separate from `getLeaderboard` on purpose: the picker needs the whole
+ * league, not the page currently in view. Wiring it to the paged table
+ * would silently make players on page 2 unselectable from page 1.
+ *
+ * This returns everything, which is the same shape the picker had before
+ * pagination. It is the wrong control at ten thousand players — that
+ * wants a typeahead — but narrowing it now would be a behaviour change
+ * beyond restoring parity.
+ */
+export async function listPlayerOptions(
+	client: DbClient = prisma,
+): Promise<Array<{ id: string; username: string }>> {
+	return client.user.findMany({
+		orderBy: { username: 'asc' },
+		select: { id: true, username: true },
+	});
 }

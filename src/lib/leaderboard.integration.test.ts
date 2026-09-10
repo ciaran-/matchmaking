@@ -4,7 +4,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createTestDatabase, type TestDatabase } from '@/test/db';
 import { createGameResult } from '@/test/factories/game-result';
 import { createUser } from '@/test/factories/user';
-import { getLeaderboard, getPlayerRank, pageForRank } from './leaderboard';
+import { getLeaderboard, getPlayerRank } from './leaderboard';
+import { pageForRank } from './pagination';
 
 let db: TestDatabase;
 

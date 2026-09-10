@@ -10,7 +10,12 @@ import { RadioGroup } from '@/components/storybook/radio-group';
 import { authenticatedUser } from '@/lib/auth';
 import { canActOnGame } from '@/lib/authorization';
 import type { EloResult } from '@/lib/elo';
-import { getLeaderboard, getPlayerRank, pageForRank } from '@/lib/leaderboard';
+import {
+	getLeaderboard,
+	getPlayerRank,
+	listPlayerOptions,
+} from '@/lib/leaderboard';
+import { pageCount, pageForRank } from '@/lib/pagination';
 import { recordGame } from '@/lib/record-game';
 import { userFacingError } from '@/lib/user-facing-errors';
 
@@ -30,6 +35,10 @@ const getLeaguePlacesFn = createServerFn({ method: 'GET' })
  * The signed-in user's rank, for the "jump to my rank" affordance.
  * POST because it performs an auth check.
  */
+const listPlayerOptionsFn = createServerFn({ method: 'GET' }).handler(
+	async () => listPlayerOptions(),
+);
+
 const getMyRankFn = createServerFn({ method: 'POST' }).handler(async () => {
 	const user = await authenticatedUser();
 	return getPlayerRank(user.id);
@@ -228,6 +237,14 @@ function LeagueTable() {
 		placeholderData: (previous) => previous,
 	});
 
+	// The picker needs every player, not the page in view. Only fetched
+	// once the modal is opened.
+	const playerOptionsQuery = useQuery({
+		queryKey: ['playerOptions'],
+		queryFn: () => listPlayerOptionsFn(),
+		enabled: modalOpen,
+	});
+
 	const myRankQuery = useQuery({
 		queryKey: ['myRank', dbUser?.id],
 		queryFn: () => getMyRankFn(),
@@ -236,11 +253,7 @@ function LeagueTable() {
 
 	const table = tableQuery.data;
 	const rows = table?.data ?? [];
-	// The modal's player picker needs the whole league, not the page in
-	// view — a page-2 player must still be selectable from page 1.
-	const lastPage = table
-		? Math.max(1, Math.ceil(table.total / table.pageSize))
-		: 1;
+	const lastPage = table ? pageCount(table.total, table.pageSize) : 1;
 	const myPage =
 		myRankQuery.data && table
 			? pageForRank(myRankQuery.data, table.pageSize)
@@ -387,7 +400,7 @@ function LeagueTable() {
 
 			{modalOpen && (
 				<RecordGameModal
-					players={rows}
+					players={playerOptionsQuery.data ?? []}
 					currentUser={dbUser}
 					onClose={() => setModalOpen(false)}
 					onSuccess={() => {
