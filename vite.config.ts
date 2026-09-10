@@ -15,7 +15,15 @@ const config = defineConfig({
       projects: ['./tsconfig.json'],
     }),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({
+      router: {
+        // Co-located HTTP tests live beside the routes they exercise
+        // (src/routes/api/v1/*.integration.test.ts). Without this the
+        // generator warns "does not export a Route" for each of them on
+        // every dev start and build.
+        routeFileIgnorePattern: '\\.test\\.tsx?$',
+      },
+    }),
     viteReact({
       babel: {
         plugins: ['babel-plugin-react-compiler'],

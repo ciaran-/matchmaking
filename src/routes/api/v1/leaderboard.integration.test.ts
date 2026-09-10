@@ -258,6 +258,7 @@ describe('GET /api/v1/leaderboard', () => {
 				currentRating: 1000,
 				wins: 0,
 				losses: 0,
+				draws: 0,
 				gamesPlayed: 0,
 			});
 		});

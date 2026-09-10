@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { PlusCircle } from 'lucide-react';
 import { useId, useState } from 'react';
@@ -6,22 +6,19 @@ import { SignInGate } from '@/components/SignInGate';
 import { Button } from '@/components/storybook/button';
 import { Dialog } from '@/components/storybook/dialog';
 import { RadioGroup } from '@/components/storybook/radio-group';
-import { prisma } from '@/db';
 import { authenticatedUser } from '@/lib/auth';
 import { canActOnGame } from '@/lib/authorization';
 import type { EloResult } from '@/lib/elo';
+import { getLeaderboard } from '@/lib/leaderboard';
 import { recordGame } from '@/lib/record-game';
 import { userFacingError } from '@/lib/user-facing-errors';
 
-const getLeaguePlaces = createServerFn({
-	method: 'GET',
-}).handler(async () => {
-	return await (prisma
-		? prisma.user.findMany({
-				orderBy: { currentRating: 'desc' },
-				include: { gameParticipations: true },
-			})
-		: []);
+const getLeaguePlaces = createServerFn({ method: 'GET' }).handler(async () => {
+	// Delegates to the same lib read that backs GET /api/v1/leaderboard, so
+	// the page and the API cannot disagree. It also counts outcomes in the
+	// database rather than shipping every participation row here to be
+	// tallied in the browser.
+	return getLeaderboard();
 });
 
 export const recordGameFn = createServerFn({ method: 'POST' })
@@ -246,34 +243,32 @@ function LeagueTable() {
 								<th className="text-white px-4 py-2">Player</th>
 								<th className="text-white px-4 py-2">Wins</th>
 								<th className="text-white px-4 py-2">Losses</th>
+								<th className="text-white px-4 py-2">Draws</th>
 								<th className="text-white px-4 py-2">Games Played</th>
 								<th className="text-white px-4 py-2">Rating</th>
 							</tr>
 						</thead>
 						<tbody>
 							{leaguePlaces.length > 0 &&
-								leaguePlaces.map((player, index) => (
+								leaguePlaces.map((player) => (
 									<tr
 										className="border-y border-white text-white text-center"
 										key={player.username}
 									>
-										<td className="py-1">{index + 1}</td>
-										<td className="py-1">{player.username}</td>
+										<td className="py-1">{player.rank}</td>
 										<td className="py-1">
-											{
-												player.gameParticipations.filter(
-													(game) => game.ratingChange > 0,
-												).length
-											}
+											<Link
+												to="/player/$username"
+												params={{ username: player.username }}
+												className="hover:text-cyan-300 hover:underline"
+											>
+												{player.username}
+											</Link>
 										</td>
-										<td className="py-1">
-											{
-												player.gameParticipations.filter(
-													(game) => game.ratingChange < 0,
-												).length
-											}
-										</td>
-										<td className="py-1">{player.gameParticipations.length}</td>
+										<td className="py-1">{player.wins}</td>
+										<td className="py-1">{player.losses}</td>
+										<td className="py-1">{player.draws}</td>
+										<td className="py-1">{player.gamesPlayed}</td>
 										<td className="py-1">{player.currentRating}</td>
 									</tr>
 								))}

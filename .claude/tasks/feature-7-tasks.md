@@ -60,7 +60,8 @@ Define the **single source of truth** for win/loss/draw semantics and league ran
 
 Decide & document the canonical definitions at the top of the file as exported constants/helpers so feature 10 imports them:
 
-- **Win** = participant's `ratingChange > 0`; **Loss** = `ratingChange < 0`; **Draw** = `ratingChange === 0`. (Document the rationale inline: rating change is the recorded outcome per participant; a draw between equal-rated players yields 0. If a future Elo change could produce 0 on a non-draw, revisit — note this.)
+- **CORRECTED (2026-09-10).** This task originally specified **Win** = `ratingChange > 0`, **Loss** = `ratingChange < 0`, **Draw** = `ratingChange === 0`. That rule is **wrong** and was live on `/league` and `GET /api/v1/leaderboard`. Elo moves both players on a draw unless their ratings are exactly equal (draw at 1200 v 1000 gives -8 / +8), so it counted a draw as a **win** for the underdog and a **loss** for the favourite. The task's own parenthetical — "a draw between equal-rated players yields 0" — states the condition without following it through.
+- The outcome is read from the **recorded score**: `recordGame` writes `{ A: [1,0], B: [0,1], draw: [0,0] }`, so comparing `teamAScore`/`teamBScore` against the participant's `team` is unambiguous and survives any change to the rating algorithm. Implemented once in `src/lib/game-outcome.ts` (`outcomeFor` for a single row, `countOutcomes` for in-query aggregation); feature 10 must import from there rather than re-deriving.
 
 ```ts
 export interface PlayerProfile {
@@ -89,7 +90,7 @@ export async function getPlayerProfile(
 
 ### Tests
 
-Use `withRollback` + `createUser` / `createGameResult` factories. Cases:
+Use `createTestDatabase` + `db.reset()` (there is no `withRollback` helper) with the `createUser` / `createGameResult` factories. Cases:
 
 1. Unknown username → `null`.
 2. New user, no games → rating 1000, rank reflects others, all counts 0.
