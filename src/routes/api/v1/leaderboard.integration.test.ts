@@ -19,7 +19,7 @@ vi.mock('@clerk/backend', () => ({
 
 import { createClerkClient } from '@clerk/backend';
 import type { ApiErrorBody } from '@/lib/api/respond';
-import type { LeaderboardEntry } from '@/lib/leaderboard';
+import type { LeaderboardPage } from '@/lib/leaderboard';
 import { createTestDatabase, type TestDatabase } from '@/test/db';
 import { createGameResult } from '@/test/factories/game-result';
 import { createUser } from '@/test/factories/user';
@@ -168,6 +168,75 @@ describe('GET /api/v1/leaderboard', () => {
 		});
 	});
 
+	describe('query parameters', () => {
+		beforeEach(() => {
+			stubClerkCredential(mockCreateClerkClient, {
+				kind: 'apiKey',
+				clerkUserId: 'user_caller',
+			});
+		});
+
+		async function ladder(count: number) {
+			await callerUser();
+			await Array.from({ length: count }).reduce<Promise<void>>(
+				(chain, _, i) =>
+					chain.then(async () => {
+						await createUser(db.prisma, {
+							username: `p${i + 1}`,
+							currentRating: 2000 - i,
+						});
+					}),
+				Promise.resolve(),
+			);
+		}
+
+		it('returns the requested page with absolute ranks', async () => {
+			await ladder(5);
+
+			const { status, body } = await readJson<LeaderboardPage>(
+				await callRoute(GET, apiRequest(`${URL}?page=2&pageSize=2`)),
+			);
+
+			expect(status).toBe(200);
+			expect(body.page).toBe(2);
+			expect(body.pageSize).toBe(2);
+			expect(body.data.map((r) => r.rank)).toEqual([3, 4]);
+		});
+
+		it('filters by search while keeping league rank', async () => {
+			await ladder(3);
+
+			const { body } = await readJson<LeaderboardPage>(
+				await callRoute(GET, apiRequest(`${URL}?search=p3`)),
+			);
+
+			expect(body.data).toHaveLength(1);
+			expect(body.data[0]).toMatchObject({ username: 'p3', rank: 3 });
+			expect(body.total).toBe(1);
+		});
+
+		it('returns 400 for a non-numeric page', async () => {
+			await callerUser();
+
+			const { status, body } = await readJson<ApiErrorBody>(
+				await callRoute(GET, apiRequest(`${URL}?page=abc`)),
+			);
+
+			expect(status).toBe(400);
+			expect(body.error.code).toBe('bad_request');
+		});
+
+		it('returns 400 for a pageSize beyond the cap', async () => {
+			await callerUser();
+
+			const { status } = await readJson<ApiErrorBody>(
+				await callRoute(GET, apiRequest(`${URL}?pageSize=1000`)),
+			);
+
+			expect(status).toBe(400);
+		});
+	});
+
 	describe('body', () => {
 		beforeEach(() => {
 			stubClerkCredential(mockCreateClerkClient, {
@@ -181,15 +250,19 @@ describe('GET /api/v1/leaderboard', () => {
 			await createUser(db.prisma, { username: 'top', currentRating: 1500 });
 			await createUser(db.prisma, { username: 'bottom', currentRating: 900 });
 
-			const { status, body } = await readJson<LeaderboardEntry[]>(
+			const { status, body } = await readJson<LeaderboardPage>(
 				await callRoute(GET, apiRequest(URL)),
 			);
 
 			expect(status).toBe(200);
 			// Bare array, not { data: [...] } — reads use bare resources.
-			expect(Array.isArray(body)).toBe(true);
-			expect(body.map((r) => r.username)).toEqual(['top', 'caller', 'bottom']);
-			expect(body.map((r) => r.rank)).toEqual([1, 2, 3]);
+			expect(Array.isArray(body.data)).toBe(true);
+			expect(body.data.map((r) => r.username)).toEqual([
+				'top',
+				'caller',
+				'bottom',
+			]);
+			expect(body.data.map((r) => r.rank)).toEqual([1, 2, 3]);
 		});
 
 		it('reflects real games recorded in the database', async () => {
@@ -214,11 +287,11 @@ describe('GET /api/v1/leaderboard', () => {
 				],
 			});
 
-			const { body } = await readJson<LeaderboardEntry[]>(
+			const { body } = await readJson<LeaderboardPage>(
 				await callRoute(GET, apiRequest(URL)),
 			);
 
-			const callerRow = body.find((r) => r.username === 'caller');
+			const callerRow = body.data.find((r) => r.username === 'caller');
 			expect(callerRow?.wins).toBe(1);
 			expect(callerRow?.losses).toBe(0);
 			expect(callerRow?.gamesPlayed).toBe(1);
@@ -246,12 +319,12 @@ describe('GET /api/v1/leaderboard', () => {
 		it('returns an empty array when only the caller exists and has no games', async () => {
 			await callerUser();
 
-			const { body } = await readJson<LeaderboardEntry[]>(
+			const { body } = await readJson<LeaderboardPage>(
 				await callRoute(GET, apiRequest(URL)),
 			);
 
-			expect(body).toHaveLength(1);
-			expect(body[0]).toEqual({
+			expect(body.data).toHaveLength(1);
+			expect(body.data[0]).toEqual({
 				rank: 1,
 				id: expect.any(String),
 				username: 'caller',

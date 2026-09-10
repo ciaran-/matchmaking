@@ -80,7 +80,7 @@ Full parameter and response detail is in the spec. In brief:
 
 | Method | Path | |
 | --- | --- | --- |
-| GET | `/leaderboard` | League table, highest rating first |
+| GET | `/leaderboard` | League table — paged, searchable (`page`, `pageSize`, `search`) |
 | GET | `/league/activity` | Anonymised activity for the dashboard |
 | GET | `/me/search` | Your active search — `null` if none, not a 404 |
 | GET | `/players/{username}` | A player's identity, record and rank |
@@ -108,5 +108,21 @@ a tracked follow-up, not a hidden feature.
   person. A service identity is planned separately
   (`.claude/plans/feature-11-service-identity.md`); until then there is no
   way for a non-human caller to authenticate as itself.
-- **No pagination.** Read endpoints return everything. Fine at current
-  scale; it will need addressing before it isn't.
+## Pagination
+
+Two styles, chosen by the shape of the data rather than by preference.
+
+**Cursor** — `{ data, nextCursor }` — for `/players/{username}/matches`.
+An append-only feed read newest first, where absolute position is
+meaningless and a game recorded mid-scroll must not shift a page boundary
+and show you a row twice. Cursors are opaque: pass back what you were
+given.
+
+**Page/offset** — `{ data, page, pageSize, total }` — for `/leaderboard`.
+A ranked table is navigated *by position*: "page 7" and "jump to my rank"
+are meaningful requests a cursor cannot express, and `total` is needed to
+render page controls. The tradeoff is that a rating change between
+requests can shift a row across a page boundary.
+
+Everything else returns its full result. That is fine at current scale and
+will need addressing before it isn't.

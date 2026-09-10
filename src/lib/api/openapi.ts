@@ -122,8 +122,43 @@ export function buildOpenApiSpec() {
 			'/leaderboard': {
 				get: {
 					summary: 'The league table, highest rating first.',
+					description:
+						'Page/offset paginated, not cursor — a ranked table is ' +
+						'navigated by position. Rank is a league-wide position ' +
+						'computed before the search filter, so searching for a ' +
+						'player reports where they sit in the league, not among ' +
+						'the search results.',
+					parameters: [
+						{
+							name: 'page',
+							in: 'query',
+							required: false,
+							description: '1-based. Past the end returns an empty data array.',
+							schema: { type: 'integer', minimum: 1 },
+						},
+						{
+							name: 'pageSize',
+							in: 'query',
+							required: false,
+							description: 'Defaults to 25, capped at 100.',
+							schema: { type: 'integer', minimum: 1, maximum: 100 },
+						},
+						{
+							name: 'search',
+							in: 'query',
+							required: false,
+							description:
+								'Case-insensitive substring match on username. ' +
+								'% and _ are matched literally, not as wildcards.',
+							schema: { type: 'string' },
+						},
+					],
 					responses: {
-						'200': { description: 'Ranked entries.' },
+						'200': {
+							description:
+								'A page of ranked entries: { data, page, pageSize, total }.',
+						},
+						'400': errorResponse,
 						...commonResponses,
 					},
 				},

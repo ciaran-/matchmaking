@@ -39,7 +39,7 @@ T2 (my-rank query — shared with feature 7) ───────────�
 
 ## T1 — `getLeaderboard` lib fn (SQL aggregation + pagination + search)
 
-**Status:** pending
+**Status:** done
 **Depends on:** nothing (feature 7 helpers if merged)
 **Blocks:** T3
 
@@ -115,7 +115,7 @@ export async function getLeaderboard(
 
 ## T2 — "My rank" query (shared with feature 7)
 
-**Status:** pending
+**Status:** done
 **Depends on:** nothing
 **Blocks:** T3
 
@@ -155,7 +155,7 @@ Cases: user at top → rank 1, page 1; user mid-field with `pageSize: 2` → cor
 
 ## T3 — Refit the `/league` route
 
-**Status:** pending
+**Status:** done
 **Depends on:** T1, T2
 **Blocks:** T4
 
@@ -194,7 +194,7 @@ Replace `getLeaguePlaces` and upgrade the table: pagination, current-user highli
 
 ## T4 — Verification + commit
 
-**Status:** pending
+**Status:** done
 **Depends on:** T3
 
 ### Pre-commit checklist (in order)
