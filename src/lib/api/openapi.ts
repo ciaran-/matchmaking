@@ -187,6 +187,29 @@ export function buildOpenApiSpec() {
 					},
 				},
 			},
+			'/players/{username}/ratings': {
+				get: {
+					summary: "A player's rating after each game they've played.",
+					description:
+						'Ascending by game time. Does not include the starting-rating ' +
+						'point before their first game — that is a presentation ' +
+						'concern for the chart, not part of recorded history. Same ' +
+						'read-by-anyone stance as /players/{username}.',
+					parameters: [
+						{
+							name: 'username',
+							in: 'path',
+							required: true,
+							schema: { type: 'string' },
+						},
+					],
+					responses: {
+						'200': { description: 'Rating history, oldest first.' },
+						'404': errorResponse,
+						...commonResponses,
+					},
+				},
+			},
 			'/games': {
 				post: {
 					summary: 'Record a completed game.',
