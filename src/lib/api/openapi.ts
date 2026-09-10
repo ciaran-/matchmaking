@@ -166,6 +166,27 @@ export function buildOpenApiSpec() {
 					},
 				},
 			},
+			'/players/{username}': {
+				get: {
+					summary: "A player's identity, record and league rank.",
+					description:
+						'Readable by any authenticated caller — the same facts are ' +
+						'already public on the leaderboard.',
+					parameters: [
+						{
+							name: 'username',
+							in: 'path',
+							required: true,
+							schema: { type: 'string' },
+						},
+					],
+					responses: {
+						'200': { description: 'The profile.' },
+						'404': errorResponse,
+						...commonResponses,
+					},
+				},
+			},
 			'/games': {
 				post: {
 					summary: 'Record a completed game.',

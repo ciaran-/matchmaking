@@ -83,6 +83,7 @@ Full parameter and response detail is in the spec. In brief:
 | GET | `/leaderboard` | League table, highest rating first |
 | GET | `/league/activity` | Anonymised activity for the dashboard |
 | GET | `/me/search` | Your active search — `null` if none, not a 404 |
+| GET | `/players/{username}` | A player's identity, record and rank |
 | GET | `/matches/{matchId}` | One match's derived state |
 | POST | `/games` | Record a completed game |
 | GET | `/search` | Poll your search state |
