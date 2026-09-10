@@ -1,8 +1,60 @@
-# Service Identity — Feature Plan
+# Closing the Authenticated Boundary — Feature Plan
+
+> **Reframed 2026-09-10.** This began as "add a service identity". The
+> actual goal is narrower and more useful: *reject any call to any of our
+> endpoints that does not come from ourselves or a signed-in user.*
+> Service identity is one piece of that, and not the urgent one — see
+> "Status" below.
 
 A way for **the system itself** to authenticate to its own API, distinct
 from any human user. This is a **high-level** plan; per-endpoint shapes and
 the task breakdown come after the decisions in Checkpoint 1 are locked.
+
+## Status
+
+**Done.**
+
+- **Server functions are default-deny.** They compile to public endpoints
+  at `/_serverFn/<id>`, and authentication was opt-in: fifteen handlers
+  called `authenticatedUser()`, two did not. An anonymous call to the
+  built server returned a full page of leaderboard data — demonstrated,
+  not theorised. `functionMiddleware` now authenticates every server
+  function unless it is in a one-entry allowlist (`syncUserFn`, the
+  sign-in path, which verifies Clerk itself).
+- **REST routes are default-deny.** `apiMiddleware` authenticates the
+  whole `/api/v1` surface; only `openapi.json` is exempt. A test asserts
+  every route file attaches the middleware, so a new route cannot skip it
+  silently.
+- **The actor seam exists.** `resolveActor` returns
+  `{ kind: 'user' } | { kind: 'service' }`, and `requireUser` narrows it.
+  `acceptsToken` includes `m2m_token`, so a machine credential *would*
+  resolve — nothing issues one yet.
+
+**Deliberately not done: the credential mechanism.**
+
+The original plan locked "use Clerk M2M" by inheritance from feature 6's
+personal-API-key decision. That premise does not transfer. A user's PAT
+belongs to a person Clerk already manages; a machine credential does not,
+and using a *user* identity provider for machine auth puts Clerk in the
+critical path for internal operations — a Clerk outage would stop
+internal jobs, not just sign-ins. It also pulls against the goal of not
+depending on live systems in local development.
+
+The alternatives — a signed secret from the secrets manager, or HMAC
+request signing — verify locally, cost nothing, and work offline, at the
+price of manual rotation and no revocation trail.
+
+**The decision is deferred until a real caller exists, because there
+isn't one.** `matchmaker-tick` runs `runMatcherPass()` in the same
+process; it calls `src/lib/` directly, so there is no request to
+authenticate and a credential would buy it nothing. The batch importer is
+not built. Choosing a mechanism now would be choosing for a hypothetical.
+
+**When one does exist:** for a purely internal job, prefer a signed secret
+and keep Clerk out of the internal critical path. For anything
+representing a third party, Clerk M2M. Note also that
+`CLERK_SECRET_KEY` is **not** a candidate — it is the backend master key
+and must never be presented as a caller credential.
 
 ## Context
 
@@ -122,24 +174,18 @@ determines whether this is a live exposure or a latent one.
 Then give the tick a real credential instead of relying on platform
 routing, so its authorisation is a property of our code.
 
-### Checkpoint 3 — Batch import of offline games
-The originating use case. **Three problems here are not authentication and
-need designing on their own merits:**
+### Checkpoint 3 — *(spun out)*
 
-- **Elo is order-dependent.** Replaying historical games in submission
-  order rather than played order produces different final ratings,
-  silently. The import needs an explicit played-at ordering and must apply
-  games in it.
-- **Idempotency.** `recordGame` has no idempotency key. A retried or
-  partially-failed import would double-apply rating changes and corrupt
-  the ladder. Needs a natural key or an import batch id.
-- **Backdating.** `createdAt` drives the activity dashboard and its
-  "last 24h" window. Imported games stamped `now` would distort it. The
-  test factory already supports a `createdAt` override, so the shape is
-  anticipated; the API is not.
+Batch import of offline games is now
+**`.claude/plans/feature-12-offline-game-import.md`**. It is a feature in
+its own right rather than a checkpoint of an auth change: its hard parts
+— Elo's order-dependence, idempotency, and backdating — have nothing to
+do with authentication, and bundling them here would have hidden three
+design decisions inside a security change.
 
-A partial import that leaves ratings half-applied is worse than a rejected
-one — prefer all-or-nothing per batch.
+It remains the first concrete caller that authenticates as the system,
+and therefore the thing that decides feature 11's deferred credential
+question.
 
 ## Testing
 

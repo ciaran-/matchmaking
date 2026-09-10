@@ -176,7 +176,7 @@ describe('resolveApiUser', () => {
 			headers: { authorization: 'Bearer ak_live_key' },
 		});
 
-	it('accepts session tokens and API keys, and nothing else', async () => {
+	it('accepts session tokens, API keys and machine tokens, and nothing else', async () => {
 		const authenticateRequest = stubDualClerk({
 			isAuthenticated: true,
 			userId: CLERK_ID,
@@ -187,8 +187,26 @@ describe('resolveApiUser', () => {
 		await resolveApiUser(request);
 
 		expect(authenticateRequest).toHaveBeenCalledWith(request, {
-			acceptsToken: ['session_token', 'api_key'],
+			acceptsToken: ['session_token', 'api_key', 'm2m_token'],
 		});
+	});
+
+	it('refuses a service credential, which is not a user', async () => {
+		// resolveApiUser narrows to a person. A machine token authenticates
+		// fine but has nobody behind it, and every endpoint using this
+		// helper needs a User row.
+		const authenticateRequest = vi.fn().mockResolvedValue({
+			isAuthenticated: true,
+			toAuth: () => ({ tokenType: 'm2m_token', subject: 'mch_abc' }),
+		});
+		mockCreateClerkClient.mockReturnValue({
+			authenticateRequest,
+		} as unknown as ClerkClient);
+
+		await expect(resolveApiUser(apiRequest())).rejects.toThrow(
+			'requires a user',
+		);
+		expect(mockFindUnique).not.toHaveBeenCalled();
 	});
 
 	it('resolves an API key to the DB user', async () => {
