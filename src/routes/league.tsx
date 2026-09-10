@@ -1,4 +1,5 @@
-import { createFileRoute, useRouter } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { PlusCircle } from 'lucide-react';
 import { useId, useState } from 'react';
@@ -6,22 +7,41 @@ import { SignInGate } from '@/components/SignInGate';
 import { Button } from '@/components/storybook/button';
 import { Dialog } from '@/components/storybook/dialog';
 import { RadioGroup } from '@/components/storybook/radio-group';
-import { prisma } from '@/db';
 import { authenticatedUser } from '@/lib/auth';
 import { canActOnGame } from '@/lib/authorization';
 import type { EloResult } from '@/lib/elo';
+import {
+	getLeaderboard,
+	getPlayerRank,
+	listPlayerOptions,
+} from '@/lib/leaderboard';
+import { pageCount, pageForRank } from '@/lib/pagination';
 import { recordGame } from '@/lib/record-game';
 import { userFacingError } from '@/lib/user-facing-errors';
 
-const getLeaguePlaces = createServerFn({
-	method: 'GET',
-}).handler(async () => {
-	return await (prisma
-		? prisma.user.findMany({
-				orderBy: { currentRating: 'desc' },
-				include: { gameParticipations: true },
-			})
-		: []);
+const getLeaguePlacesFn = createServerFn({ method: 'GET' })
+	.inputValidator(
+		(data: { page?: number; search?: string } | undefined) => data ?? {},
+	)
+	.handler(async ({ data }) => {
+		// Delegates to the same lib read that backs GET /api/v1/leaderboard, so
+		// the page and the API cannot disagree. It also counts outcomes in the
+		// database rather than shipping every participation row here to be
+		// tallied in the browser.
+		return getLeaderboard({ page: data.page, search: data.search });
+	});
+
+/**
+ * The signed-in user's rank, for the "jump to my rank" affordance.
+ * POST because it performs an auth check.
+ */
+const listPlayerOptionsFn = createServerFn({ method: 'GET' }).handler(
+	async () => listPlayerOptions(),
+);
+
+const getMyRankFn = createServerFn({ method: 'POST' }).handler(async () => {
+	const user = await authenticatedUser();
+	return getPlayerRank(user.id);
 });
 
 export const recordGameFn = createServerFn({ method: 'POST' })
@@ -44,7 +64,8 @@ export const recordGameFn = createServerFn({ method: 'POST' })
 export const Route = createFileRoute('/league')({
 	ssr: 'data-only',
 	component: LeagueTable,
-	loader: async () => await getLeaguePlaces(),
+	// No loader: the table is now paged and searchable, so it is fetched
+	// client-side and refetches as those change.
 });
 
 type Player = { id: string; username: string };
@@ -203,10 +224,40 @@ function RecordGameModal({
 }
 
 function LeagueTable() {
-	const leaguePlaces = Route.useLoaderData();
 	const { dbUser } = Route.useRouteContext();
 	const router = useRouter();
 	const [modalOpen, setModalOpen] = useState(false);
+	const [page, setPage] = useState(1);
+	const [search, setSearch] = useState('');
+	const searchInputId = useId();
+
+	const tableQuery = useQuery({
+		queryKey: ['leaderboard', page, search],
+		queryFn: () => getLeaguePlacesFn({ data: { page, search } }),
+		placeholderData: (previous) => previous,
+	});
+
+	// The picker needs every player, not the page in view. Only fetched
+	// once the modal is opened.
+	const playerOptionsQuery = useQuery({
+		queryKey: ['playerOptions'],
+		queryFn: () => listPlayerOptionsFn(),
+		enabled: modalOpen,
+	});
+
+	const myRankQuery = useQuery({
+		queryKey: ['myRank', dbUser?.id],
+		queryFn: () => getMyRankFn(),
+		enabled: Boolean(dbUser),
+	});
+
+	const table = tableQuery.data;
+	const rows = table?.data ?? [];
+	const lastPage = table ? pageCount(table.total, table.pageSize) : 1;
+	const myPage =
+		myRankQuery.data && table
+			? pageForRank(myRankQuery.data, table.pageSize)
+			: null;
 
 	return (
 		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
@@ -239,6 +290,36 @@ function LeagueTable() {
 						<PlusCircle className="w-5 h-5" />
 						Record Game
 					</button>
+
+					<div className="w-full max-w-2xl mb-6 flex flex-wrap items-center gap-3">
+						<label htmlFor={searchInputId} className="sr-only">
+							Search players by name
+						</label>
+						<input
+							id={searchInputId}
+							value={search}
+							onChange={(e) => {
+								setSearch(e.target.value);
+								// A new search invalidates the current page number.
+								setPage(1);
+							}}
+							placeholder="Search players…"
+							className="flex-1 min-w-48 bg-slate-700 border border-slate-500 text-white placeholder:text-slate-400 rounded-lg px-3 py-2"
+						/>
+						{myPage !== null && myRankQuery.data !== null && (
+							<Button
+								variant="secondary"
+								size="small"
+								onClick={() => {
+									setSearch('');
+									setPage(myPage);
+								}}
+							>
+								Jump to my rank (#{myRankQuery.data})
+							</Button>
+						)}
+					</div>
+
 					<table>
 						<thead>
 							<tr className="border border-white bg-teal-600">
@@ -246,45 +327,80 @@ function LeagueTable() {
 								<th className="text-white px-4 py-2">Player</th>
 								<th className="text-white px-4 py-2">Wins</th>
 								<th className="text-white px-4 py-2">Losses</th>
+								<th className="text-white px-4 py-2">Draws</th>
 								<th className="text-white px-4 py-2">Games Played</th>
 								<th className="text-white px-4 py-2">Rating</th>
 							</tr>
 						</thead>
 						<tbody>
-							{leaguePlaces.length > 0 &&
-								leaguePlaces.map((player, index) => (
-									<tr
-										className="border-y border-white text-white text-center"
-										key={player.username}
-									>
-										<td className="py-1">{index + 1}</td>
-										<td className="py-1">{player.username}</td>
-										<td className="py-1">
-											{
-												player.gameParticipations.filter(
-													(game) => game.ratingChange > 0,
-												).length
-											}
-										</td>
-										<td className="py-1">
-											{
-												player.gameParticipations.filter(
-													(game) => game.ratingChange < 0,
-												).length
-											}
-										</td>
-										<td className="py-1">{player.gameParticipations.length}</td>
-										<td className="py-1">{player.currentRating}</td>
-									</tr>
-								))}
+							{rows.map((player) => (
+								<tr
+									className={`border-y border-white text-center ${
+										player.id === dbUser?.id
+											? 'bg-cyan-500/20 text-white font-semibold'
+											: 'text-white'
+									}`}
+									key={player.username}
+								>
+									<td className="py-1">{player.rank}</td>
+									<td className="py-1">
+										<Link
+											to="/player/$username"
+											params={{ username: player.username }}
+											className="hover:text-cyan-300 hover:underline"
+										>
+											{player.username}
+										</Link>
+									</td>
+									<td className="py-1">{player.wins}</td>
+									<td className="py-1">{player.losses}</td>
+									<td className="py-1">{player.draws}</td>
+									<td className="py-1">{player.gamesPlayed}</td>
+									<td className="py-1">{player.currentRating}</td>
+								</tr>
+							))}
 						</tbody>
 					</table>
+
+					{tableQuery.isPending && (
+						<p className="text-slate-400 mt-6">Loading rankings…</p>
+					)}
+
+					{tableQuery.isSuccess && rows.length === 0 && (
+						<p className="text-slate-400 mt-6">
+							{search ? `No players matching “${search}”.` : 'No players yet.'}
+						</p>
+					)}
+
+					{table && table.total > table.pageSize && (
+						<div className="flex items-center gap-4 mt-8">
+							<Button
+								variant="secondary"
+								size="small"
+								disabled={page <= 1}
+								onClick={() => setPage((p) => Math.max(1, p - 1))}
+							>
+								Previous
+							</Button>
+							<span className="text-slate-300 text-sm">
+								Page {table.page} of {lastPage}
+							</span>
+							<Button
+								variant="secondary"
+								size="small"
+								disabled={page >= lastPage}
+								onClick={() => setPage((p) => p + 1)}
+							>
+								Next
+							</Button>
+						</div>
+					)}
 				</SignInGate>
 			</section>
 
 			{modalOpen && (
 				<RecordGameModal
-					players={leaguePlaces}
+					players={playerOptionsQuery.data ?? []}
 					currentUser={dbUser}
 					onClose={() => setModalOpen(false)}
 					onSuccess={() => {

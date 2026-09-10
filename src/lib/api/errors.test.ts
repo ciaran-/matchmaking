@@ -71,6 +71,13 @@ describe('toErrorResponse', () => {
 		expect(mapped.code).toBe('bad_request');
 	});
 
+	it('maps an invalid pagination cursor to 400 (feature 8)', async () => {
+		const mapped = await map(new Error('Invalid cursor'));
+
+		expect(mapped.status).toBe(400);
+		expect(mapped.code).toBe('bad_request');
+	});
+
 	it.each([
 		'declinePendingGame: match m1 is already terminal',
 		'convertPendingGameToResult: match m1 is not BOTH_CONFIRMED',

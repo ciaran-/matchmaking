@@ -122,8 +122,43 @@ export function buildOpenApiSpec() {
 			'/leaderboard': {
 				get: {
 					summary: 'The league table, highest rating first.',
+					description:
+						'Page/offset paginated, not cursor — a ranked table is ' +
+						'navigated by position. Rank is a league-wide position ' +
+						'computed before the search filter, so searching for a ' +
+						'player reports where they sit in the league, not among ' +
+						'the search results.',
+					parameters: [
+						{
+							name: 'page',
+							in: 'query',
+							required: false,
+							description: '1-based. Past the end returns an empty data array.',
+							schema: { type: 'integer', minimum: 1 },
+						},
+						{
+							name: 'pageSize',
+							in: 'query',
+							required: false,
+							description: 'Defaults to 25, capped at 100.',
+							schema: { type: 'integer', minimum: 1, maximum: 100 },
+						},
+						{
+							name: 'search',
+							in: 'query',
+							required: false,
+							description:
+								'Case-insensitive substring match on username. ' +
+								'% and _ are matched literally, not as wildcards.',
+							schema: { type: 'string' },
+						},
+					],
 					responses: {
-						'200': { description: 'Ranked entries.' },
+						'200': {
+							description:
+								'A page of ranked entries: { data, page, pageSize, total }.',
+						},
+						'400': errorResponse,
 						...commonResponses,
 					},
 				},
@@ -161,6 +196,90 @@ export function buildOpenApiSpec() {
 					responses: {
 						'200': { description: 'Match state.' },
 						'403': errorResponse,
+						'404': errorResponse,
+						...commonResponses,
+					},
+				},
+			},
+			'/players/{username}': {
+				get: {
+					summary: "A player's identity, record and league rank.",
+					description:
+						'Readable by any authenticated caller — the same facts are ' +
+						'already public on the leaderboard.',
+					parameters: [
+						{
+							name: 'username',
+							in: 'path',
+							required: true,
+							schema: { type: 'string' },
+						},
+					],
+					responses: {
+						'200': { description: 'The profile.' },
+						'404': errorResponse,
+						...commonResponses,
+					},
+				},
+			},
+			'/players/{username}/matches': {
+				get: {
+					summary: "A player's completed match history, newest first.",
+					description:
+						'Readable by any authenticated caller, same as the profile ' +
+						'endpoint. 1v1 only — TEAM_VS_TEAM games are excluded, since ' +
+						'opponent resolution assumes exactly two participants.',
+					parameters: [
+						{
+							name: 'username',
+							in: 'path',
+							required: true,
+							schema: { type: 'string' },
+						},
+						{
+							name: 'cursor',
+							in: 'query',
+							required: false,
+							description: 'An opaque token from a previous page’s nextCursor.',
+							schema: { type: 'string' },
+						},
+						{
+							name: 'limit',
+							in: 'query',
+							required: false,
+							description: 'Page size, 1–50. Defaults to 20.',
+							schema: { type: 'integer', minimum: 1, maximum: 50 },
+						},
+					],
+					responses: {
+						'200': {
+							description: 'A page of match history: { data, nextCursor }.',
+						},
+						'400': errorResponse,
+						'404': errorResponse,
+						...commonResponses,
+					},
+				},
+			},
+			'/players/{username}/ratings': {
+				get: {
+					summary: "A player's rating after each game they've played.",
+					description:
+						'Ascending by game time. Does not include the starting-rating ' +
+						'point before their first game — that is a presentation ' +
+						'concern for the chart, not part of recorded history. A client ' +
+						'drawing the same chart should prepend the starting rating of ' +
+						'1000. Same read-by-anyone stance as /players/{username}.',
+					parameters: [
+						{
+							name: 'username',
+							in: 'path',
+							required: true,
+							schema: { type: 'string' },
+						},
+					],
+					responses: {
+						'200': { description: 'Rating history, oldest first.' },
 						'404': errorResponse,
 						...commonResponses,
 					},

@@ -75,6 +75,28 @@ Status codes: `200` reads, `201` for creates that produce a resource
 (`POST /api/v1/games`, `POST /api/v1/matches/:id/result` — it creates a
 `GameResult`), `204` for successful actions with no body.
 
+### Pagination: cursor or page, and when to use which
+
+Both exist, deliberately. They are not interchangeable and the choice is
+driven by the shape of the data, not by preference.
+
+**Cursor** — `{ data, nextCursor }` — for append-only feeds read newest
+first, where items are added at the end you start from and absolute
+position is meaningless. Match history is the case. Stable under writes:
+a game recorded mid-scroll cannot shift a page boundary and make you see a
+row twice. Cursors are opaque; clients pass back what they were given.
+
+**Page/offset** — `{ data, page, pageSize, total }` — for ranked tables
+where absolute position is the point and users navigate to it. The
+leaderboard is the case: "page 7" and "jump to my rank" are meaningful
+requests a cursor cannot express, and `total` is needed to render page
+controls. Accepts that a rating change between requests can shift rows
+across a boundary — for a leaderboard that is tolerable, and the
+alternative is not being able to jump at all.
+
+If a new endpoint fits neither description, prefer cursor: it is the one
+that stays correct under concurrent writes.
+
 **Idempotent state-transition actions return `200`**, not `201`, and
 return the updated resource: start/cancel search, confirm, decline. They
 move an existing thing through a state machine rather than creating one.
