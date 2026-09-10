@@ -49,7 +49,7 @@ T1 → T2; T3 → T4 → T5; (T2, T5) → T6 → (T7, T8, T9) → T10.
 
 ## T1 — Mechanism spike + API conventions
 
-**Status:** pending
+**Status:** done
 **Depends on:** nothing
 **Blocks:** T2, T6
 **Parallel with:** T3
@@ -87,7 +87,7 @@ The plan defers the exact HTTP mechanism to this checkpoint. TanStack Start ship
 
 ## T2 — Extract shared auth helper (session-token path)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T1
 **Blocks:** T5, T6
 **Parallel with:** T3, T4
@@ -130,7 +130,7 @@ Mock `@clerk/backend` and `@tanstack/react-start/server` (per CLAUDE.md testing 
 
 ## T3 — Confirm Clerk native API-key surface
 
-**Status:** pending
+**Status:** done
 **Depends on:** nothing
 **Blocks:** T4
 **Parallel with:** T1, T2
@@ -156,7 +156,7 @@ The strategy is decided: **use Clerk's native, user-scoped API keys** (no self-m
 
 ## T4 — API-key issuance + revocation (Clerk wrappers)
 
-**Status:** pending
+**Status:** done — web surface at `/settings/api-keys`
 **Depends on:** T3
 **Blocks:** T5
 **Parallel with:** T2
@@ -194,7 +194,7 @@ Implement personal-API-key issuance, listing, and revocation as **thin wrappers 
 
 ## T5 — Dual-credential resolver
 
-**Status:** pending
+**Status:** done
 **Depends on:** T2, T4
 **Blocks:** T6
 **Parallel with:** nothing
@@ -230,7 +230,7 @@ Keep `authenticatedUser` for the web server fns; `resolveApiUser` is the API edg
 
 ## T6 — Reference endpoint + HTTP-level test infra
 
-**Status:** pending
+**Status:** done — verified live with a real PAT
 **Depends on:** T2, T5
 **Blocks:** T7, T8, T9
 
@@ -264,7 +264,7 @@ Prove the whole stack — server route → validation → `resolveApiUser` → l
 
 ## T7 — Read endpoints (Checkpoint 2)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T6
 **Blocks:** T10
 **Parallel with:** T8, T9
@@ -291,7 +291,7 @@ Expose the existing read models as GETs, following T6's pattern exactly. No new 
 
 ## T8 — Game-result write endpoint (Checkpoint 3)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T6
 **Blocks:** T10
 **Parallel with:** T7, T9
@@ -324,7 +324,7 @@ HTTP integration: valid body records a game + returns rating changes; same-playe
 
 ## T9 — Matchmaking lifecycle endpoints (Checkpoint 4)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T6
 **Blocks:** T10
 **Parallel with:** T7, T8
@@ -363,7 +363,7 @@ HTTP integration reusing matchmaking scenarios (`twoSearchingPlayersAtEqualRatin
 
 ## T10 — Hardening: rate limiting, logging, OpenAPI (Checkpoint 5)
 
-**Status:** pending
+**Status:** done
 **Depends on:** T7, T8, T9
 **Blocks:** nothing (ship)
 

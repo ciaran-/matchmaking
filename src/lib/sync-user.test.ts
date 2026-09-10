@@ -68,6 +68,7 @@ const makeDbUser = (overrides = {}) => ({
 	email: 'test@example.com',
 	username: 'testuser',
 	currentRating: 1000,
+	role: 'PLAYER' as const,
 	createdAt: new Date(),
 	updatedAt: new Date(),
 	...overrides,

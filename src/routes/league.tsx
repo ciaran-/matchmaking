@@ -1,7 +1,5 @@
-import { createClerkClient } from '@clerk/backend';
 import { createFileRoute, useRouter } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
 import { PlusCircle } from 'lucide-react';
 import { useId, useState } from 'react';
 import { SignInGate } from '@/components/SignInGate';
@@ -9,6 +7,8 @@ import { Button } from '@/components/storybook/button';
 import { Dialog } from '@/components/storybook/dialog';
 import { RadioGroup } from '@/components/storybook/radio-group';
 import { prisma } from '@/db';
+import { authenticatedUser } from '@/lib/auth';
+import { canActOnGame } from '@/lib/authorization';
 import type { EloResult } from '@/lib/elo';
 import { recordGame } from '@/lib/record-game';
 import { userFacingError } from '@/lib/user-facing-errors';
@@ -29,19 +29,14 @@ export const recordGameFn = createServerFn({ method: 'POST' })
 		(data: { playerAId: string; playerBId: string; result: EloResult }) => data,
 	)
 	.handler(async ({ data }) => {
-		const secretKey = process.env.CLERK_SECRET_KEY;
-		const publishableKey = process.env.VITE_CLERK_PUBLISHABLE_KEY;
-		if (!secretKey || !publishableKey)
-			throw new Error('Missing Clerk env vars');
+		const user = await authenticatedUser();
 
-		const clerk = createClerkClient({ secretKey, publishableKey });
-		// Pass a headers-only clone — the original request body is already consumed
-		// by TanStack Start to deserialize the server function arguments.
-		const req = getRequest();
-		const auth = await clerk.authenticateRequest(
-			new Request(req.url, { headers: req.headers }),
-		);
-		if (!auth.isSignedIn) throw new Error('Unauthorized');
+		// Same rule as `POST /api/v1/games` — enforced here too, because
+		// both paths share the `recordGame` core and leaving either one
+		// permissive would make the restriction cosmetic.
+		if (!canActOnGame(user, data)) {
+			throw new Error('You are not a participant in this match');
+		}
 
 		return recordGame(data);
 	});
@@ -56,18 +51,28 @@ type Player = { id: string; username: string };
 
 interface RecordGameModalProps {
 	players: Player[];
+	/** The signed-in user's row, or null if it could not be synced. */
+	currentUser: { id: string; role: string } | null;
 	onClose: () => void;
 	onSuccess: () => void;
 }
 
 function RecordGameModal({
 	players,
+	currentUser,
 	onClose,
 	onSuccess,
 }: RecordGameModalProps) {
 	const playerASelectId = useId();
 	const playerBSelectId = useId();
-	const [playerAId, setPlayerAId] = useState('');
+	// Recording is restricted to games you played in; admins may record
+	// anyone's (see `canActOnGame`). For an ordinary player there is no
+	// choice to make about player A — it is them — so the UI states that
+	// rather than offering a dropdown whose other options would 403.
+	const canRecordForOthers = currentUser?.role === 'ADMIN';
+	const [playerAId, setPlayerAId] = useState(
+		canRecordForOthers ? '' : (currentUser?.id ?? ''),
+	);
 	const [playerBId, setPlayerBId] = useState('');
 	const [result, setResult] = useState<EloResult>('A');
 	const [submitting, setSubmitting] = useState(false);
@@ -125,22 +130,32 @@ function RecordGameModal({
 							>
 								Player A
 							</label>
-							<select
-								id={playerASelectId}
-								value={playerAId}
-								onChange={(e) => {
-									setPlayerAId(e.target.value);
-									if (e.target.value === playerBId) setPlayerBId('');
-								}}
-								className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
-							>
-								<option value="">Select a player…</option>
-								{players.map((p) => (
-									<option key={p.id} value={p.id}>
-										{p.username}
-									</option>
-								))}
-							</select>
+							{canRecordForOthers ? (
+								<select
+									id={playerASelectId}
+									value={playerAId}
+									onChange={(e) => {
+										setPlayerAId(e.target.value);
+										if (e.target.value === playerBId) setPlayerBId('');
+									}}
+									className="bg-slate-700 text-white border border-slate-500 rounded-lg px-3 py-2 w-full"
+								>
+									<option value="">Select a player…</option>
+									{players.map((p) => (
+										<option key={p.id} value={p.id}>
+											{p.username}
+										</option>
+									))}
+								</select>
+							) : (
+								<p
+									id={playerASelectId}
+									className="bg-slate-700/60 text-white border border-slate-600 rounded-lg px-3 py-2 w-full"
+								>
+									{players.find((p) => p.id === currentUser?.id)?.username ??
+										'You'}
+								</p>
+							)}
 						</div>
 
 						<div className="flex flex-col gap-1.5">
@@ -189,6 +204,7 @@ function RecordGameModal({
 
 function LeagueTable() {
 	const leaguePlaces = Route.useLoaderData();
+	const { dbUser } = Route.useRouteContext();
 	const router = useRouter();
 	const [modalOpen, setModalOpen] = useState(false);
 
@@ -269,6 +285,7 @@ function LeagueTable() {
 			{modalOpen && (
 				<RecordGameModal
 					players={leaguePlaces}
+					currentUser={dbUser}
 					onClose={() => setModalOpen(false)}
 					onSuccess={() => {
 						setModalOpen(false);
