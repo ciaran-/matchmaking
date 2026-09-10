@@ -106,7 +106,7 @@ describe('GET /api/v1/leaderboard', () => {
 			expect(viaSession.body).toEqual(viaKey.body);
 		});
 
-		it('accepts session tokens and API keys, and nothing else', async () => {
+		it('accepts session tokens, API keys and machine tokens, and nothing else', async () => {
 			await callerUser();
 			const authenticateRequest = stubClerkCredential(mockCreateClerkClient, {
 				kind: 'apiKey',
@@ -116,7 +116,7 @@ describe('GET /api/v1/leaderboard', () => {
 			await callRoute(GET, apiRequest(URL));
 
 			expect(authenticateRequest).toHaveBeenCalledWith(expect.any(Request), {
-				acceptsToken: ['session_token', 'api_key'],
+				acceptsToken: ['session_token', 'api_key', 'm2m_token'],
 			});
 		});
 
