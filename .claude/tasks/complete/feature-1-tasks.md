@@ -1,6 +1,6 @@
 # Feature 1 — Clerk ↔ DB User Sync: Implementation Tasks
 
-> Read the full plan at `.claude/plans/feature-1-clerk-db-user-sync.md` before starting.
+> Read the full plan at `.claude/plans/complete/feature-1-clerk-db-user-sync.md` before starting.
 > Complete tasks in order — each step depends on the previous.
 
 ---

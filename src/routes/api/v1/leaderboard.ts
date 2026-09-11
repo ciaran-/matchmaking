@@ -17,7 +17,7 @@ const querySchema = z.object({
  * `GET /api/v1/leaderboard` — the league table.
  *
  * The reference implementation of the conventions in
- * `.claude/plans/feature-6-api-conventions.md`: authenticate with either
+ * `docs/api-conventions.md`: authenticate with either
  * credential, delegate to the `src/lib/` core, serialise through
  * `respond.ts`, and map any throw onto the standard error envelope.
  * Later endpoints copy this shape.

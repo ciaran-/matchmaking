@@ -8,7 +8,7 @@ import { clerkClient } from '@/lib/auth';
  * These are thin wrappers over Clerk's native, user-scoped API keys —
  * Clerk owns the key store, so there is deliberately **no Prisma model,
  * no migration, and no hashing of our own**. See
- * `.claude/plans/feature-6-api-conventions.md` §8 for the SDK surface.
+ * `docs/api-conventions.md` §8 for the SDK surface.
  *
  * The raw secret exists in exactly one place in this app's lifetime: the
  * return value of `issueApiKey`. It is never persisted, never logged, and

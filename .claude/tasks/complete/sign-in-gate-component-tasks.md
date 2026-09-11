@@ -1,6 +1,6 @@
 # SignInGate Component: Task List
 
-Plan: `.claude/plans/sign-in-gate-component.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/sign-in-gate-component.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 ---
 
@@ -35,7 +35,7 @@ Standard baseline: get into a known-good state before touching anything.
 
 ### Steps
 
-1. Read `.claude/plans/sign-in-gate-component.md` end-to-end. The plan documents *what* the component does and *why*; this task list is the *how*.
+1. Read `.claude/plans/complete/sign-in-gate-component.md` end-to-end. The plan documents *what* the component does and *why*; this task list is the *how*.
 2. Read `CLAUDE.md`, especially the `## Code Style`, `## Testing`, and `## Pre-commit Checklist` sections.
 3. Read `src/components/LeagueActivity.tsx` and `src/components/LeagueActivity.test.tsx`. They're the most recent component + test in the repo and the right template for slate/cyan visual language plus the per-file jsdom test environment pattern.
 4. Confirm `git status` is clean (`AGENTS.md` may be the only untracked file — leave alone).
@@ -447,7 +447,7 @@ Title: `feat: styled SignInGate component replaces unstyled sign-in fallbacks`
 Body should include:
 
 - One-paragraph summary: the three unstyled fallbacks are gone, replaced with a shared `<SignInGate>` for the fully-gated pages and a styled CTA button on the marketing hero.
-- Reference to the plan: `.claude/plans/sign-in-gate-component.md`.
+- Reference to the plan: `.claude/plans/complete/sign-in-gate-component.md`.
 - Commit list (T1–T5; T0/T6 are not commits).
 - Test plan (the checklist + manual smoke scenarios from this task).
 - Open follow-ups verbatim from the plan's §"Open follow-ups" section.

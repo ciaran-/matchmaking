@@ -1,6 +1,6 @@
 # Feature 7 — Player Profile Page: Task List
 
-Plan: `.claude/plans/feature-7-player-profile.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/feature-7-player-profile.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 This is the **anchor** of the player-facing work (features 7–10). Features 8 and 9 mount onto the page built here; feature 10 links into it. Build this first.
 
@@ -24,7 +24,7 @@ T1 → T2 → T3 → T4.
 
 ## Pre-flight (do once)
 
-1. Read `.claude/plans/feature-7-player-profile.md` end-to-end.
+1. Read `.claude/plans/complete/feature-7-player-profile.md` end-to-end.
 2. Read `CLAUDE.md` — **`createServerFn` Pattern**, **Sentry Instrumentation**, **Testing**, **Code Style**, **Path Aliases**.
 3. Confirm `npm install`, `npm run build`, `npm run test`, `npm run test:integration` (Docker) pass on `main`.
 4. No schema changes are required — `User`, `GameParticipant`, `GameResult` already hold everything.

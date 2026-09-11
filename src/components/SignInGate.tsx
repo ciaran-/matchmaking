@@ -49,7 +49,7 @@ const signInAppearance = {
  * Use this on routes where the entire content section requires auth.
  * For the marketing homepage (`/`), where the hero should render for
  * everyone, use a styled `<SignInButton>` instead — see
- * `.claude/plans/sign-in-gate-component.md`.
+ * `.claude/plans/complete/sign-in-gate-component.md`.
  */
 export function SignInGate({ children }: SignInGateProps) {
 	const { isLoaded, isSignedIn } = useUser();

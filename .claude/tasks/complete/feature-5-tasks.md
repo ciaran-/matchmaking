@@ -1,6 +1,6 @@
 # Feature 5 — League Activity Dashboard: Task List
 
-Plan: `.claude/plans/feature-5-league-activity-dashboard.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/feature-5-league-activity-dashboard.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 ---
 
@@ -29,7 +29,7 @@ T5 floats — depends only on the type definition (plan §"Data shape"); merge b
 
 ## Pre-flight (do once before starting any task)
 
-1. Read `.claude/plans/feature-5-league-activity-dashboard.md` end-to-end. The plan is the source of truth for shape, naming, and acceptance criteria.
+1. Read `.claude/plans/complete/feature-5-league-activity-dashboard.md` end-to-end. The plan is the source of truth for shape, naming, and acceptance criteria.
 2. Read `CLAUDE.md` — in particular **`createServerFn` Pattern**, **Sentry Instrumentation**, **Testing** (both unit and integration), and **Code Style**.
 3. Confirm `npm install`, `npm run build`, and `npm run test` succeed against the current `main`.
 4. Confirm `.mcp.json` exists locally with a valid `DATABASE_URL` (no migrations are needed for this feature, but integration tests require Docker for testcontainers).

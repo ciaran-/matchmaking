@@ -1,7 +1,14 @@
-# Feature 6 — REST API conventions
+# REST API conventions
 
-Locked in T1. Every endpoint in checkpoints 2–5 follows this document; it
-exists so per-endpoint shapes aren't re-litigated by each task's author.
+The working contract every `/api/v1` endpoint follows, so per-endpoint
+shapes aren't re-litigated. This is the *how*; the *why* behind the larger
+choices lives in `docs/decisions/` (start with
+`0011-rest-api-contract.md`). For the consumer-facing description of the
+API, see `docs/api.md`.
+
+Originally written as T1 of feature 6
+(`.claude/plans/complete/feature-6-rest-api.md`); task references below
+(T1, T3, …) point into that feature's task list.
 
 Verified against `@tanstack/react-start@1.167.16` /
 `@tanstack/router-core@1.168.9` / `zod@4.1.11`.
@@ -47,9 +54,12 @@ Facts established by the T1 spike:
 - Route files are picked up by the router plugin automatically;
   `routeTree.gen.ts` regenerates on build. Do not hand-edit it.
 
-Per-route `server.middleware` exists and is where rate limiting and Sentry
-spans should attach in T10 — **do not** hand-roll a wrapper function for
-those in T7–T9.
+Per-route `server.middleware` is where cross-cutting concerns attach. Every
+route declares `server: { middleware: [apiMiddleware] }`
+(`src/lib/api/middleware.ts`), which authenticates (default-deny), applies
+rate limiting and opens a Sentry span. **Do not** hand-roll a wrapper
+function for any of those; a test asserts every route file attaches the
+middleware.
 
 ## 2. URL namespace
 
@@ -66,10 +76,10 @@ those in T7–T9.
 object itself, not `{ data: match }`. Collections return a bare JSON array.
 
 Wrap in `{ data, ... }` **only** where envelope metadata is genuinely
-needed — i.e. when pagination lands (a follow-up in the plan, not v1).
-Mixing the two shapes per-endpoint is worse than either, so if pagination
-is added to an endpoint, that endpoint moves to `{ data, page }` as a
-documented breaking change within `v1` or waits for `v2`.
+needed — in practice, paginated collections (below). Mixing the two shapes
+per-endpoint is worse than either, so if an existing endpoint gains
+pagination, it moves to the paginated shape as a documented breaking change
+within `v1` or waits for `v2`.
 
 Status codes: `200` reads, `201` for creates that produce a resource
 (`POST /api/v1/games`, `POST /api/v1/matches/:id/result` — it creates a
@@ -132,7 +142,7 @@ One shape, always:
 | Valid credential, not the caller's resource | `forbidden` | 403 |
 | Resource does not exist | `not_found` | 404 |
 | State conflict (already terminal, already recorded) | `conflict` | 409 |
-| Rate limit exceeded (T10) | `rate_limited` | 429 |
+| Rate limit exceeded | `rate_limited` | 429 |
 | Anything else | `internal` | 500 |
 
 ### Mapping lib throws → status
@@ -186,9 +196,12 @@ would change.
 - `src/lib/api/respond.ts` — `jsonOk(value, status?)` and
   `jsonError(code, message, status)`. Every route serialises through these;
   no hand-built `new Response(JSON.stringify(...))` anywhere.
-- `src/lib/auth.ts` — `authenticatedUser(request?)` (T2) and
-  `resolveApiUser(request)` (T5). API routes call `resolveApiUser`, always
-  passing the handler's `request`.
+- `src/lib/auth.ts` — `authenticatedUser(request?)` for server functions;
+  `resolveActor(request)` and `resolveApiUser(request)` for API routes.
+  Routes that only make sense for a person call `resolveApiUser`, which
+  refuses a service credential. An endpoint that genuinely serves the
+  system calls `resolveActor` and narrows with `requireUser` where needed.
+  Always pass the handler's `request`.
 - Both modules carry the `// Server-only module` header.
 
 ## 6b. Authorization
@@ -262,13 +275,13 @@ with a real key.
 
 **Lifecycle.** `createTestDatabase()` in `beforeAll`, `db.reset()` in
 `beforeEach`, `db.teardown()` in `afterAll` — one container per file.
-Note `src/test/db.ts` exposes `reset`, not the `withRollback` helper
-CLAUDE.md and the task list describe; the rolled-back-transaction design
-was never built.
+Isolation is truncation via `reset()`, not a rolled-back transaction — the
+`withRollback` design in the original integration-testing plan was never
+built.
 
 ---
 
-## 8. API key integration (T3)
+## 8. API key integration
 
 Verified against the installed `@clerk/backend@3.2.14`. Types:
 `dist/api/endpoints/APIKeysApi.d.ts`, `dist/api/resources/APIKey.d.ts`,
@@ -276,7 +289,7 @@ Verified against the installed `@clerk/backend@3.2.14`. Types:
 
 **Enablement: confirmed.** A read-only probe against our instance on
 2026-09-09 (`clerk.apiKeys.list({ subject })` for a real user) returned
-200 with `totalCount: 0`. The feature is live on our plan; T4 is unblocked.
+200 with `totalCount: 0`. The feature is live on our plan.
 
 ### Client surface
 
@@ -301,9 +314,10 @@ the user-scoped keys this feature issues, or an org id. `APIKey` fields:
 
 **Revoke, don't delete.** `revoke` preserves the row with `revoked: true`
 and `revocationReason`, so a revoked key stays auditable and listable via
-`includeInvalid: true`. `delete` destroys the record. T4 uses `revoke`.
+`includeInvalid: true`. `delete` destroys the record. The key management
+page (`/settings/api-keys`) uses `revoke`.
 
-### Revocation is not immediate (measured, T6)
+### Revocation is not immediate (measured)
 
 **A revoked key keeps authenticating for up to ~60 seconds**, but only if
 it was verified shortly before being revoked. Measured against our live
@@ -347,30 +361,31 @@ matched by `isJwtFormat`) — but **the SDK already branches for us**:
 
 ```ts
 const auth = await clerk.authenticateRequest(request, {
-	acceptsToken: ['session_token', 'api_key'],
+	acceptsToken: ['session_token', 'api_key', 'm2m_token'],
 });
 if (!auth.isAuthenticated) throw new Error('Unauthorized');
 const { tokenType, userId } = auth.toAuth();
 ```
 
-This supersedes the manual prefix-branching described in T5 of the task
-list. One call resolves either credential; `tokenType` is
+One call resolves any accepted credential, so there is no manual
+prefix-branching. For a session token or API key, `tokenType` is
 `'session_token' | 'api_key'` and `userId` is the Clerk user id in both
-cases. T5 becomes a thin wrapper, not a dispatcher.
+cases; an M2M token resolves to a service actor (see below).
 
-Two consequences for T2/T5:
+Two consequences:
 
 - **`isSignedIn` is deprecated** in this SDK version in favour of
   `isAuthenticated`, which is the only discriminator present on *both*
-  session and machine auth objects. The extracted helper uses
-  `isAuthenticated`; the current inline copies use `isSignedIn`.
+  session and machine auth objects. `src/lib/auth.ts` uses
+  `isAuthenticated`; `src/lib/sync-user.ts` still uses `isSignedIn`.
 - **Org-scoped keys must be rejected.** For an `api_key` token the auth
   object is either `{ userId: string, orgId: null }` or
   `{ userId: null, orgId: string }`. This feature is user-scoped only (see
   the plan's non-goals), so a null `userId` is an `unauthorized`/401, not
   a crash on a null lookup.
 
-Machine-to-machine tokens (`mt_`) and OAuth tokens (`oat_`) are also
-supported by `acceptsToken` — deliberately **not** included. Service
-identities are an explicit non-goal; leaving them out of the accept list
-means an M2M token is rejected rather than silently resolving to nobody.
+OAuth tokens (`oat_`) are deliberately **not** in the accept list — listing
+a token type is what makes it acceptable. Machine-to-machine tokens (`mt_`)
+**are** accepted since feature 11 and resolve to a service actor, which
+every current endpoint refuses via `requireUser`. Nothing issues one yet;
+see `docs/decisions/0005-service-identity-deferred.md`.

@@ -1,6 +1,6 @@
 # Feature 9 — Rating Progression Chart: Task List
 
-Plan: `.claude/plans/feature-9-rating-progression-chart.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/feature-9-rating-progression-chart.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 Renders **on the player profile** (feature 7) — feature 7 must be merged first. Shares a backend access pattern with feature 8; build after or alongside it to reuse the query shape.
 
@@ -24,7 +24,7 @@ Renders **on the player profile** (feature 7) — feature 7 must be merged first
 
 ## Pre-flight (do once)
 
-1. Read `.claude/plans/feature-9-rating-progression-chart.md` and `feature-7-player-profile.md`.
+1. Read `.claude/plans/complete/feature-9-rating-progression-chart.md` and `feature-7-player-profile.md`.
 2. Read `CLAUDE.md` — **`createServerFn` Pattern**, **Sentry Instrumentation**, **Testing**, **Code Style**.
 3. Confirm feature 7 is merged. Confirm `npm run build`/`test`/`test:integration` pass.
 4. No schema changes required.

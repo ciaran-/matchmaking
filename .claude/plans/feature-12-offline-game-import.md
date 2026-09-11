@@ -8,7 +8,7 @@ design discussion, not a decided approach. The open questions below are
 the point of it; several have no obvious right answer and at least one
 (ordering) can silently corrupt the ladder if answered wrong.
 
-Spun out of `.claude/plans/feature-11-service-identity.md`, where it was
+Spun out of `.claude/plans/complete/feature-11-service-identity.md`, where it was
 Checkpoint 3. It is a feature in its own right, not a checkpoint of an
 auth change.
 

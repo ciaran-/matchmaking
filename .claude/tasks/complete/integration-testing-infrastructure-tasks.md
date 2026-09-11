@@ -1,6 +1,6 @@
 # Integration Testing Infrastructure — Task List
 
-Plan: `.claude/plans/integration-testing-infrastructure.md`
+Plan: `.claude/plans/complete/integration-testing-infrastructure.md`
 
 ## Background
 
