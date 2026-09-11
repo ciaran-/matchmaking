@@ -174,6 +174,13 @@ Store plans in `.claude/plans/<readable-kebab-case-name>.md` within the repo. Do
 
 Store task lists in `.claude/tasks/<readable-kebab-case-name>-tasks.md`.
 
+The top level of `.claude/plans/` and `.claude/tasks/` holds only upcoming or in-progress work. When work leaves that state, `git mv` the plan and its task list into a subfolder and update any path references to them:
+
+- `complete/` — actioned and implemented (merged to `main`). Still useful history, but point-in-time: later work may have overturned what it says.
+- `archived/` — we moved on without doing it (dropped, or superseded before being built). Add a short note at the top saying why and what replaced it.
+
+**Decisions outlive plans.** When a plan makes a decision that constrains work beyond that feature, record it in `docs/decisions/` as part of completing the work (see `docs/decisions/README.md`). Code comments and docs cite the decision record or `docs/api-conventions.md`, never a plan. To reverse a decision, write a new record that supersedes it rather than editing the old one.
+
 **Plan approval ≠ implementation go-ahead.** When a plan is approved via `ExitPlanMode`, that means the plan document is accepted. Wait for an explicit instruction ("implement it", "go ahead") before writing any code.
 
 ## Scope Discipline

@@ -104,10 +104,12 @@ a tracked follow-up, not a hidden feature.
 
 ## Absent by design
 
-- **No machine-to-machine credentials.** Every credential belongs to a
-  person. A service identity is planned separately
-  (`.claude/plans/feature-11-service-identity.md`); until then there is no
-  way for a non-human caller to authenticate as itself.
+- **No machine-to-machine credentials are issued.** Every credential in use
+  belongs to a person. How a service would authenticate as itself has
+  deliberately not been decided yet
+  (`docs/decisions/0005-service-identity-deferred.md`); until it is, there
+  is no way for a non-human caller to do so.
+
 ## Pagination
 
 Two styles, chosen by the shape of the data rather than by preference.

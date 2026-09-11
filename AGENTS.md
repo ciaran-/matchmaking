@@ -185,6 +185,17 @@ The local `.mcp.json` is intentionally ignored because it can contain a local
 
 - Store implementation plans in `.claude/plans/<readable-kebab-case-name>.md`.
 - Store task lists in `.claude/tasks/<readable-kebab-case-name>-tasks.md`.
+- The top level of `.claude/plans/` and `.claude/tasks/` holds only upcoming
+  or in-progress work. When work leaves that state, `git mv` the plan and its
+  task list and update any path references:
+  - `complete/` — actioned and implemented (merged to `main`).
+  - `archived/` — moved on without doing it; add a note at the top saying
+    why and what replaced it.
+- Decisions that constrain work beyond one feature are recorded in
+  `docs/decisions/` (see its README) as part of completing that work. Code
+  and docs cite decision records or `docs/api-conventions.md`, not plans.
+  Supersede a decision with a new record; don't edit the old one to reverse
+  it.
 - Do not create root-level `PLAN.md` files.
 - If asked only to write a plan or task list, limit exploration to what is
   directly needed for that deliverable.

@@ -10,7 +10,7 @@ import { userFacingError } from '@/lib/user-facing-errors';
  * `src/lib/` throws plain `Error`s with descriptive messages and no type
  * taxonomy, so the mapping matches on message content — the same approach
  * `userFacingError` already takes. See
- * `.claude/plans/feature-6-api-conventions.md` §4, which this table is the
+ * `docs/api-conventions.md` §4, which this table is the
  * implementation of; keep the two in step.
  *
  * Anything unrecognised is a 500 on purpose. An unmapped throw is a gap in

@@ -5,7 +5,7 @@
  *
  * Every route serialises through these two helpers so the success and
  * error shapes are identical across the whole surface. See
- * `.claude/plans/feature-6-api-conventions.md` for the envelope contract
+ * `docs/api-conventions.md` for the envelope contract
  * and the lib-error → HTTP status mapping table.
  */
 
