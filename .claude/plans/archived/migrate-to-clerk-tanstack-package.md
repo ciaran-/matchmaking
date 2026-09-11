@@ -1,5 +1,36 @@
 # Migrate Clerk auth to @clerk/tanstack-react-start
 
+> **Archived 2026-09-11 — decided not to do this.**
+>
+> Nothing requires it. The body-consumption workaround this plan targeted
+> still works (the headers-only request copy in `src/lib/auth.ts`). Since
+> this plan was written, features 6 and 11 built personal API keys and M2M
+> token acceptance directly on `@clerk/backend`. The TanStack package's
+> `auth()` would support those too, so it would neither unblock nor break
+> anything.
+>
+> Weighed on 2026-09-11:
+>
+> - **Benefits:** the server knows who is signed in while rendering
+>   (no loading flash, server-side redirects); Clerk's handshake is handled
+>   when a page loads with an expired session token; the request-copy
+>   workaround goes away.
+> - **Costs:** its middleware authenticates every request, including page
+>   loads; it needs a TanStack Start upgrade; `auth.ts`, `sync-user.ts`,
+>   both auth middlewares and the test stubs need rework; and it ties us
+>   more closely to Clerk, against the aim of running locally without live
+>   Clerk.
+>
+> The real Clerk need is different: `@clerk/clerk-react` is deprecated
+> upstream. That is handled by
+> `.claude/plans/clerk-react-core-3-upgrade.md`, which does not require
+> this package.
+>
+> Revisit if server-side auth state becomes a real UX problem (for example
+> sign-in flicker on gated pages, or a need for server-side redirects).
+>
+> The original plan follows unchanged.
+
 ## Why
 
 The project currently uses `@clerk/clerk-react` + `@clerk/backend` directly for
