@@ -71,20 +71,6 @@ export async function authenticatedUser(
 }
 
 /**
- * Resolve the user behind an API request, accepting **either** credential:
- * a Clerk session token (what the web app sends) or a personal API key
- * (`Authorization: Bearer ak_…`, what scripts and mobile clients send).
- *
- * Both resolve to the same `User`, so everything downstream is identical
- * regardless of which was presented — that is the whole point of the dual
- * credential model.
- *
- * No prefix sniffing here on purpose: `acceptsToken` makes Clerk do the
- * disambiguation, and listing the two types explicitly means an M2M or
- * OAuth token is rejected rather than silently accepted. Service
- * identities are an explicit non-goal of this feature.
- */
-/**
  * Who is calling. Either a person, or the system itself.
  *
  * A union rather than always-a-`User` because a service caller has no
@@ -95,24 +81,6 @@ export type Actor =
 	| { kind: 'user'; user: AuthenticatedUser }
 	| { kind: 'service'; machineId: string };
 
-/**
- * Resolve the actor behind an API request.
- *
- * Accepts three credentials, all verified by Clerk:
- *
- * - a **session token** — the browser,
- * - a **personal API key** (`ak_…`) — a script acting *as a user*,
- * - a **machine-to-machine token** (`mt_…`) — the system acting as
- *   itself, with no person behind it.
- *
- * The first two resolve to the same `User`, so endpoints cannot tell a
- * PAT from a browser session and should not try. The third resolves to a
- * service, which most endpoints should refuse — see `requireUser`.
- *
- * OAuth tokens (`oat_`) are deliberately excluded: we are not a
- * third-party developer platform, and listing a token type here is what
- * makes it acceptable.
- */
 /**
  * Per-request memo.
  *
@@ -129,6 +97,27 @@ export type Actor =
  */
 const actorByRequest = new WeakMap<Request, Promise<Actor>>();
 
+/**
+ * Resolve the actor behind an API request.
+ *
+ * Accepts three credentials, all verified by Clerk:
+ *
+ * - a **session token** — the browser,
+ * - a **personal API key** (`ak_…`) — a script acting *as a user*,
+ * - a **machine-to-machine token** (`mt_…`) — the system acting as
+ *   itself, with no person behind it.
+ *
+ * The first two resolve to the same `User`, so endpoints cannot tell a
+ * PAT from a browser session and should not try. The third resolves to a
+ * service, which most endpoints should refuse — see `requireUser`, and
+ * `docs/decisions/0005-service-identity-deferred.md` for why nothing
+ * issues one yet.
+ *
+ * No prefix sniffing: `acceptsToken` makes Clerk do the disambiguation.
+ * OAuth tokens (`oat_`) are deliberately excluded: we are not a
+ * third-party developer platform, and listing a token type here is what
+ * makes it acceptable.
+ */
 export async function resolveActor(request: Request): Promise<Actor> {
 	const memoized = actorByRequest.get(request);
 	if (memoized) return memoized;

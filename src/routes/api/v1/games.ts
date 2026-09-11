@@ -11,18 +11,18 @@ import { recordGame } from '@/lib/record-game';
 /**
  * `POST /api/v1/games` — record a game result.
  *
- * The first write path in the API (Checkpoint 3), wrapping `recordGame`
- * exactly as `recordGameFn` (`src/routes/league.tsx`) does today. Follows
- * the leaderboard reference implementation's shape: authenticate with
- * either credential, validate at the edge, delegate to the `src/lib/`
- * core, serialise through `respond.ts`, map throws through the standard
- * error envelope.
+ * Wraps `recordGame` exactly as `recordGameFn` (`src/routes/league.tsx`)
+ * does. Follows the leaderboard reference implementation's shape:
+ * authenticate with either credential, validate at the edge, delegate to
+ * the `src/lib/` core, serialise through `respond.ts`, map throws through
+ * the standard error envelope.
  *
- * **Authorization policy is unresolved** (see the plan / T8 report): any
- * signed-in user may record a game for any two players, matching
- * `recordGameFn`'s current behaviour. This is kept for parity, not a
- * deliberate endorsement — see the final task report for the
- * recommendation.
+ * **Authorization:** you may record a game you played in; an `ADMIN` may
+ * record anyone's (`canActOnGame`, the same check `recordGameFn` makes —
+ * see `docs/decisions/0006-participant-scoped-authorization.md`). The
+ * participant check runs before `recordGame` looks the players up, so a
+ * non-participant gets 403 even when a player id does not exist. Keep that
+ * order: reversing it would let this endpoint reveal which ids are real.
  */
 export const Route = createFileRoute('/api/v1/games')({
 	server: {
