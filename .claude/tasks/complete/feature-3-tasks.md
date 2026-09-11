@@ -1,6 +1,6 @@
 # Feature 3 — Record Game Result: Task List
 
-Plan: `.claude/plans/feature-3-record-game-result.md`
+Plan: `.claude/plans/complete/feature-3-record-game-result.md`
 
 ---
 

@@ -1,6 +1,6 @@
 # Feature 4 — Matchmaking: Task List
 
-Plan: `.claude/plans/feature-4-matchmaking.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/feature-4-matchmaking.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 ---
 
@@ -31,7 +31,7 @@ T1 → T2 → T4 → (T5, T6, T7) → T8 → (T9, T11) → T10 → T12
 
 ## Pre-flight (do once before starting any task)
 
-1. Read `.claude/plans/feature-4-matchmaking.md` end-to-end.
+1. Read `.claude/plans/complete/feature-4-matchmaking.md` end-to-end.
 2. Read `CLAUDE.md` — in particular the **`createServerFn` pattern**, **Sentry instrumentation**, **Testing**, and **Prisma MCP server** sections.
 3. Confirm `.mcp.json` exists locally with a valid `DATABASE_URL` (per CLAUDE.md). If not, set it up before T1.
 4. Confirm `npm install` and `npm run build` succeed against the current `main`.

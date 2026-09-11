@@ -1,6 +1,6 @@
 # Feature 2.1 — Process Game Series: Task List
 
-Plan: `.claude/plans/feature-2.1-game-series.md`
+Plan: `.claude/plans/complete/feature-2.1-game-series.md`
 Branch: `game-series-agent-f21`
 Worktree: `.claude/worktrees/game-series-f21`
 

@@ -1,6 +1,6 @@
 # Feature 6 — REST API: Task List
 
-Plan: `.claude/plans/feature-6-rest-api.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/feature-6-rest-api.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 This feature is **large and checkpointed**. Tasks are grouped by the plan's checkpoints. Each checkpoint is independently shippable — prefer separate PRs per checkpoint rather than one mega-PR.
 
@@ -34,7 +34,7 @@ T1 → T2; T3 → T4 → T5; (T2, T5) → T6 → (T7, T8, T9) → T10.
 
 ## Pre-flight (do once before starting any task)
 
-1. Read `.claude/plans/feature-6-rest-api.md` end-to-end.
+1. Read `.claude/plans/complete/feature-6-rest-api.md` end-to-end.
 2. Read `CLAUDE.md` — especially **`createServerFn` Pattern**, **Clerk auth guard**, **Testing** (unit + integration), **Path Aliases**, and **Netlify Production Checklist**.
 3. Read the saved memory pointers: `feedback_server_fn_pattern`, `project_netlify_production_gotchas`, `feedback_prefer_static_imports`.
 4. Confirm `npm install`, `npm run build`, `npm run test`, and `npm run test:integration` (Docker required) pass on current `main`.
@@ -67,7 +67,7 @@ The plan defers the exact HTTP mechanism to this checkpoint. TanStack Start ship
 ### Deliverables
 
 1. **A throwaway reference route** under `src/routes/api/v1/` (e.g. `_health.ts` or `ping.ts`) returning `{ ok: true }` as JSON, proving the mechanism end-to-end with `npm run build` + a curl against `npm run dev`. Keep it until T6 replaces it with a real endpoint, then delete.
-2. **A short conventions doc** committed at `.claude/plans/feature-6-api-conventions.md` capturing the locked decisions:
+2. **A short conventions doc** committed at `docs/api-conventions.md` capturing the locked decisions:
    - URL namespace: `/api/v1/...`.
    - **Error envelope** — one JSON shape, e.g. `{ error: { code: string; message: string } }`, plus a `lib-error → HTTP status` mapping table (validation→400, auth→401, not-found→404, conflict→409, unexpected→500). Reuse `userFacingError` for the `message`.
    - **Success envelope** — decide bare object vs. `{ data: ... }`. Recommend bare resource objects for reads, `{ data }` only where pagination metadata is needed.
@@ -144,7 +144,7 @@ The strategy is decided: **use Clerk's native, user-scoped API keys** (no self-m
 - Against the installed `@clerk/backend` version and Clerk's current docs, document the exact calls for: creating a user-scoped API key, backend verification of an incoming key, listing a user's keys, and revoking a key. Capture the request/response shapes and how the verified key maps back to a Clerk user id.
 - Confirm the API-keys feature is **enabled on our Clerk plan/instance** (dashboard toggle / plan tier). Flag immediately if it is not — that blocks T4 and is a decision for the team, not a workaround.
 - Note how a Clerk API key is distinguishable on the wire from a Clerk session token (prefix/format) so T5's resolver can branch deterministically.
-- Write all of the above into `.claude/plans/feature-6-api-conventions.md` (the doc from T1) under an "API key integration" heading.
+- Write all of the above into `docs/api-conventions.md` (the doc from T1) under an "API key integration" heading.
 
 ### Acceptance criteria
 
@@ -167,7 +167,7 @@ Implement personal-API-key issuance, listing, and revocation as **thin wrappers 
 
 ### Read first
 
-- T3's documented Clerk calls in `.claude/plans/feature-6-api-conventions.md`.
+- T3's documented Clerk calls in `docs/api-conventions.md`.
 - `src/lib/auth.ts` (T2) — the existing Clerk client construction (`createClerkClient` with `secretKey` + `publishableKey`) to reuse for these calls.
 - CLAUDE.md §"Clerk auth guard" — env-var requirements.
 
@@ -205,7 +205,7 @@ Unify both credentials behind one entry point so every endpoint is credential-ag
 
 ### Read first
 
-- `src/lib/auth.ts` (T2), `src/lib/api-keys.ts` (T4), and T3's documented Clerk verification call + key-vs-session disambiguation rule in `.claude/plans/feature-6-api-conventions.md`.
+- `src/lib/auth.ts` (T2), `src/lib/api-keys.ts` (T4), and T3's documented Clerk verification call + key-vs-session disambiguation rule in `docs/api-conventions.md`.
 
 ### Implementation
 
@@ -240,7 +240,7 @@ Prove the whole stack — server route → validation → `resolveApiUser` → l
 
 ### Read first
 
-- `.claude/plans/feature-6-api-conventions.md` (T1/T3).
+- `docs/api-conventions.md` (T1/T3).
 - `src/test/db.ts`, `src/test/factories/*`, `src/test/scenarios.ts` — reuse, do not rebuild (`project_future_http_tests`).
 - `src/routes/league.tsx` `getLeaguePlaces` — the read this endpoint mirrors.
 

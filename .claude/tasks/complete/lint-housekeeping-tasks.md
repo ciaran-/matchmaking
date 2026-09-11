@@ -1,6 +1,6 @@
 # Lint Housekeeping: Implementation Tasks
 
-> Read the full plan at `.claude/plans/lint-housekeeping.md` before starting.
+> Read the full plan at `.claude/plans/complete/lint-housekeeping.md` before starting.
 > Complete tasks in order — Task 3 depends on Tasks 1 and 2 being clean and passing.
 
 ---

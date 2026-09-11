@@ -1,6 +1,6 @@
 # Server Function Static Imports Cleanup: Task List
 
-Plan: `.claude/plans/server-fn-static-imports-cleanup.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/server-fn-static-imports-cleanup.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 ---
 
@@ -66,7 +66,7 @@ Get into a known-good starting state and confirm the baseline. Catches local dri
 
 ### Steps
 
-1. Read `.claude/plans/server-fn-static-imports-cleanup.md` end-to-end. The plan is the source of truth for *why* this change is correct and what the verification contract is.
+1. Read `.claude/plans/complete/server-fn-static-imports-cleanup.md` end-to-end. The plan is the source of truth for *why* this change is correct and what the verification contract is.
 2. Read `CLAUDE.md`, especially the existing `## createServerFn Pattern` section (the one this work makes obsolete). Knowing the current advice helps spot any place in the code that's written explicitly to satisfy it.
 3. Confirm `git status` is clean. If `AGENTS.md` is the only untracked file, that's expected — leave it alone.
 4. Confirm you're on `main` and up to date: `git fetch origin && git checkout main && git pull --ff-only`.
@@ -119,7 +119,7 @@ Then: `npm run format && npm run check`. Both clean.
 
 `refactor: convert __root.tsx server fn to static imports`
 
-Body should briefly note this is part of the cleanup tracked in `.claude/plans/server-fn-static-imports-cleanup.md`.
+Body should briefly note this is part of the cleanup tracked in `.claude/plans/complete/server-fn-static-imports-cleanup.md`.
 
 ### Acceptance criteria
 
@@ -349,7 +349,7 @@ Title: `refactor: use static imports for createServerFn handlers`
 Body should include:
 
 - A one-paragraph summary of what changed and why (citing the TanStack Start docs and the build-evidence verification).
-- Reference to the plan: `.claude/plans/server-fn-static-imports-cleanup.md`.
+- Reference to the plan: `.claude/plans/complete/server-fn-static-imports-cleanup.md`.
 - The commit list (4 commits: three route conversions + docs/memory).
 - A test plan section listing the verification steps actually run (npm run check / build / test / test:integration / client-bundle grep).
 - A short "previously" note: the old dynamic-import pattern was based on a Vite error captured by a prior session whose root cause was never determined. Re-verified against current TanStack Start that static imports work cleanly and the build plugin handles client-side stripping.

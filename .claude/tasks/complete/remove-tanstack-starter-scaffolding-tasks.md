@@ -1,6 +1,6 @@
 # Remove TanStack Starter Scaffolding: Implementation Tasks
 
-> Read the full plan at `.claude/plans/remove-tanstack-starter-scaffolding.md` before starting.
+> Read the full plan at `.claude/plans/complete/remove-tanstack-starter-scaffolding.md` before starting.
 > Also read `CLAUDE.md` — in particular **Pre-commit Checklist**, the **`createServerFn` Pattern**, and the **Plans and Tasks** sections.
 
 This is a cleanup pass. The work is mostly file deletions plus three small edits and one route rewrite. Each task below is small and self-contained; tasks T1–T5 and T7 are all independent deletions and can be done in any order (or in parallel) — only T6 (which couples a deletion with a route-file edit) has an internal ordering constraint.
@@ -37,7 +37,7 @@ These were considered and intentionally deferred. Do **not** touch them in this 
 
 ## Pre-flight (do once before any task)
 
-1. Read `.claude/plans/remove-tanstack-starter-scaffolding.md` end-to-end.
+1. Read `.claude/plans/complete/remove-tanstack-starter-scaffolding.md` end-to-end.
 2. Confirm working tree is clean (`git status`).
 3. Create a branch following the worktree naming convention from CLAUDE.md: `remove-starter-scaffolding-agent-<short-id>` (or `-dev-<initials>` for human work).
 4. Run `npm install` and `npm run build` against the current state to confirm a clean baseline.

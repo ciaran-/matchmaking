@@ -1,6 +1,6 @@
 # Feature 8 — Match History: Task List
 
-Plan: `.claude/plans/feature-8-match-history.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/feature-8-match-history.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 Renders **on the player profile** (feature 7) — feature 7 must be merged first (it provides the route, the `username` identifier convention, and the mount slot). **1v1 only** for v1 (confirmed scope decision).
 
@@ -24,7 +24,7 @@ Renders **on the player profile** (feature 7) — feature 7 must be merged first
 
 ## Pre-flight (do once)
 
-1. Read `.claude/plans/feature-8-match-history.md` and `feature-7-player-profile.md` (for the profile mount slot + identifier convention).
+1. Read `.claude/plans/complete/feature-8-match-history.md` and `feature-7-player-profile.md` (for the profile mount slot + identifier convention).
 2. Read `CLAUDE.md` — **`createServerFn` Pattern**, **Sentry Instrumentation**, **Testing**, **Code Style**.
 3. Confirm feature 7 is merged to `main` (the profile route + `getPlayerProfileFn` exist). Confirm `npm run build`/`test`/`test:integration` pass.
 4. No schema changes required.

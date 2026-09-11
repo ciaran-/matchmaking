@@ -1,6 +1,6 @@
 # Feature 10 — Leaderboard Hardening: Task List
 
-Plan: `.claude/plans/feature-10-leaderboard-hardening.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
+Plan: `.claude/plans/complete/feature-10-leaderboard-hardening.md` — read this in full before starting any task. The plan is authoritative; this task list is a tactical breakdown.
 
 This is **hardening of the existing `/league` surface**, not a greenfield build. Best built **after feature 7** (to reuse its W/L/draw + rank definitions and link usernames to real profiles), but it can ship before 7 with profile links stubbed.
 
@@ -26,7 +26,7 @@ T2 (my-rank query — shared with feature 7) ───────────�
 
 ## Pre-flight (do once)
 
-1. Read `.claude/plans/feature-10-leaderboard-hardening.md`. If feature 7 is merged, also read `feature-7-player-profile.md` (you will reuse its canonical W/L/draw + rank helpers).
+1. Read `.claude/plans/complete/feature-10-leaderboard-hardening.md`. If feature 7 is merged, also read `feature-7-player-profile.md` (you will reuse its canonical W/L/draw + rank helpers).
 2. Read `CLAUDE.md` — **`createServerFn` Pattern**, **Sentry Instrumentation**, **Testing**, **Code Style**, and **`feedback_no_premature_caching`** (fix the query first; no materialised view yet).
 3. Confirm `npm run build`/`test`/`test:integration` pass on `main`.
 4. No schema changes required (unless T1's measurement justifies a denormalised counter — see T1; treat that as a separate decision, not assumed).
