@@ -3,7 +3,8 @@
 Fifteen items in proposed order, covering roughly eight focused weeks from
 Monday 14 September 2026. This is a sequencing document, not a plan: each
 item still needs its own plan under `.claude/plans/` before any code, and
-its own feature number (the next free one is 13) at that point.
+its own feature number at that point. R1–R3 are features 13–15; the next
+free number is 16.
 
 **Status:** R1–R5 are agreed, and R4 is answered — the platform is
 multi-league. R6 onward are proposed and not yet reviewed.
@@ -43,9 +44,10 @@ holds, the order stands and the calendar compresses.
 
 ## Week 1 — Get production out of the loop
 
-### R1. Separate environments from production (L)
+### R1 — feature 13. Separate environments from production (L)
 
-Plan written: `.claude/plans/environment-separation.md`.
+Plan: `.claude/plans/feature-13-environment-separation.md`.
+Tasks: `.claude/tasks/feature-13-tasks.md`.
 
 Production, preview and local databases, on AWS-hosted Postgres.
 
@@ -71,7 +73,11 @@ with different migrations both write to it, and an abandoned one leaves its
 migration behind. A destructive migration breaks other previews until the
 next refresh. The scheduled refresh is the reset.
 
-### R2. Hardening sweep (S)
+### R2 — feature 14. Hardening sweep (S)
+
+Plan (for the conversion fix):
+`.claude/plans/feature-14-atomic-game-conversion.md`.
+Tasks (all three items): `.claude/tasks/feature-14-tasks.md`.
 
 - Check whether `matchmaker-tick` answers over HTTP in production. If it
   does, anyone can trigger extra matcher passes (open question in 0005).
@@ -81,9 +87,10 @@ next refresh. The scheduled refresh is the reset.
 - Remove the merged worktrees under `.claude/worktrees/` and the merged
   agent branches.
 
-### R3. Clerk Core 3 upgrade (S)
+### R3 — feature 15. Clerk Core 3 upgrade (S)
 
-Plan already written: `.claude/plans/clerk-react-core-3-upgrade.md`.
+Plan: `.claude/plans/feature-15-clerk-react-core-3-upgrade.md`.
+Tasks: `.claude/tasks/feature-15-tasks.md`.
 `@clerk/clerk-react` is deprecated and the app runs two Clerk cores side
 by side.
 

@@ -4,7 +4,8 @@ Replace the deprecated `@clerk/clerk-react` client SDK with `@clerk/react`,
 and bring `@clerk/backend` up to date within its current major version, so
 the app runs on a single, supported Clerk release line.
 
-High-level plan; the task breakdown comes later.
+Roadmap item R3, feature 15 (`.claude/plans/roadmap.md`).
+Tasks: `.claude/tasks/feature-15-tasks.md`.
 
 ## Why
 

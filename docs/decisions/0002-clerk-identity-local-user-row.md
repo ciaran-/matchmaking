@@ -44,6 +44,6 @@ Rejected at the time:
   request, and local development currently needs a live Clerk instance.
 - The client SDK in use, `@clerk/clerk-react`, is deprecated upstream in
   favour of `@clerk/react`. The upgrade is planned in
-  `.claude/plans/clerk-react-core-3-upgrade.md`. Moving to
+  `.claude/plans/feature-15-clerk-react-core-3-upgrade.md`. Moving to
   `@clerk/tanstack-react-start` was considered and not taken
   (`.claude/plans/archived/migrate-to-clerk-tanstack-package.md`).
