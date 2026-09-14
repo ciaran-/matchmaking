@@ -32,7 +32,7 @@ No ordering between them. T1 is the only one touching application code.
 
 ## T1 — Make the pending-game conversion atomic
 
-**Status:** not started — one decision open in the plan
+**Status:** done
 **Depends on:** nothing
 **Blocks:** roadmap R8a (disputes add a second write to this path)
 
