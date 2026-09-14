@@ -5,12 +5,11 @@ Monday 14 September 2026. This is a sequencing document, not a plan: each
 item still needs its own plan under `.claude/plans/` before any code, and
 its own feature number (the next free one is 13) at that point.
 
-**Status:** R1–R5 are agreed, and R4 is now answered — the platform is
-multi-league (see R4). R6 onward are proposed and not yet reviewed.
+**Status:** R1–R5 are agreed, and R4 is answered — the platform is
+multi-league. R6 onward are proposed and not yet reviewed.
 
 Charted version (private artifact):
 <https://claude.ai/code/artifact/2e27f310-bf42-4369-9c91-849937405953>
-The chart still shows R5 at its pre-multi-league size; see R5 below.
 
 ## Why this order
 
@@ -103,18 +102,41 @@ API keys would need reissuing.
 **Many.** The platform supports multiple leagues from the start, with at
 least two in production at launch. The reasoning is optionality: a
 single-league schema would foreclose selling the platform as a framework or
-package that a multiplayer game developer runs for their own players. That
-is a durable shape, and the expensive kind to add later — the same argument
-as 0013.
+package that a multiplayer game developer runs for their own players.
 
-Still to write: decision record 0015, which needs the sub-questions in
-"Decisions needed" below answered first.
+Settled alongside it:
+
+- **A player holds a separate rating in each league they play in.**
+  Leagues need not even be for the same game.
+- **Leagues are row-scoped within one database.** A database per tenant is
+  a value judgement for a future customer who genuinely needs it, not a
+  default. Every league-scoped query carries a filter from R5a onward.
+- **A caller names the league explicitly** — in the path for league-scoped
+  resources, in the payload where that reads better for the feature.
+
+Still open, and deliberately so:
+
+- **Who owns a league.** Both cases are wanted: a user running a league for
+  their friends, and an organisation onboarding a whole playerbase. Whether
+  those share one set of concepts is its own discussion.
+- **Whether a game or ruleset concept sits above league.**
+
+Neither blocks R5a. A league can record the user who created it, and gain
+an owning organisation, or a parent game, when those are designed. If the
+right answer at that point is a migration or a backfill, we do it — the aim
+is the right model, not the cheapest path each time.
+
+**Known risk in deferring:** if a rating should eventually belong to
+(user, game) across several leagues rather than (user, league), that is a
+re-key rather than an addition. Per-league looks right given leagues may
+span different games; recorded here so it is a chosen risk.
+
+Decision record 0015 is written with R5's plan rather than now: the
+direction belongs in the roadmap, the design belongs with the work.
 
 ### R5. Durable schema v2: leagues, sides and placements (XL) — needs R4
 
-Grew from L to XL when R4 was answered, which pushes the items after it by
-roughly half a week. It is the pivot of the whole roadmap: everything after
-it writes into these shapes.
+The pivot of the roadmap: everything after it writes into these shapes.
 
 - **R5a** — League scoping. A `League` entity, membership, and a rating per
   player *per league* — `User.currentRating` is a single global number
@@ -135,12 +157,12 @@ it writes into these shapes.
 Rating maths is unchanged: `calculateElo1v1` still runs, fed from the new
 shape and the per-league rating.
 
-The framework/package ambition also raises the stakes on the REST API being
-the primary interface rather than an afterthought (0011), and on service
-identity (0005), since an embedding developer is exactly the third-party
-caller that decision anticipated.
+The framework ambition behind R4 also raises the stakes on the REST API
+being the primary interface rather than an afterthought (0011), and on
+service identity (0005) — an embedding developer is exactly the
+third-party caller that decision anticipated.
 
-## Weeks 4–6 — Protect the ladder
+## Weeks 5–7 — Protect the ladder
 
 ### R6. Offline game import (L) — feature 12; needs R5, and R7 for R6b
 
@@ -189,7 +211,7 @@ sets both ratings.
   standings, an optional soft reset. Scoped per league, so two leagues can
   run on different season calendars.
 
-## Weeks 6–7 — Finish the core loop
+## Weeks 6–8 — Finish the core loop
 
 ### R10. Live matchmaking (L)
 
@@ -209,7 +231,7 @@ is part of why R13 can wait.
 connections, so push needs a managed pub/sub service or a separate socket
 host.
 
-## Weeks 7–8 — Beyond 1v1
+## Week 8 onward — Beyond 1v1
 
 ### R11. Team games (L) — needs R5, R6a
 
@@ -261,24 +283,10 @@ push delivery comes first.
 | Decision | Needed by | Items |
 | --- | --- | --- |
 | ~~One league, or many?~~ Answered 14 Sep: many | — | R4, R5 |
-| League sub-questions (below), to write 0015 | Before week 2 | R5 |
-| Do imported and tournament games count toward the ladder? | Before week 4 | R6, R15 |
-| Replay history, or compensating adjustments? | Before week 5 | R7, R8 |
+| Who owns a league; is there a game or ruleset above it? | With R5's plan | R5 |
+| Do imported and tournament games count toward the ladder? | Before week 5 | R6, R15 |
+| Replay history, or compensating adjustments? | Before week 6 | R7, R8 |
 | Where do push connections live? | Before week 7 | R10 |
-
-The sub-questions R5a cannot be designed without:
-
-1. **Who owns a league** — a customer or organisation account, or a user?
-   This decides whether an organisation entity is needed now.
-2. **Can one person play in several leagues**, carrying a separate rating
-   in each? Assumed yes, since it follows from multi-league, but it is
-   what forces `currentRating` out of `User`.
-3. **How is a league's data isolated** — row-scoped in one database, or a
-   database per tenant? Row scoping is the expected answer; it needs saying
-   once, because every query then carries a league filter.
-4. **How does a caller address a league in the API** — a path segment
-   (`/leagues/{id}/...`), or inferred from the credential? This is part of
-   the published contract (0011).
 
 ## Deliberately left off
 
