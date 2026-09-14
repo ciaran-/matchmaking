@@ -23,8 +23,8 @@
 >
 > The real Clerk need is different: `@clerk/clerk-react` is deprecated
 > upstream. That is handled by
-> `.claude/plans/clerk-react-core-3-upgrade.md`, which does not require
-> this package.
+> `.claude/plans/feature-15-clerk-react-core-3-upgrade.md`, which does not
+> require this package.
 >
 > Revisit if server-side auth state becomes a real UX problem (for example
 > sign-in flicker on gated pages, or a need for server-side redirects).
