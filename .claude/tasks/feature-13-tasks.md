@@ -12,7 +12,7 @@ containing a migration applies it to production when its preview builds.**
 ## Dependency graph
 
 ```
-T1 (terraform root + state) ──> T2 (preview instance + context-scoped DATABASE_URL) ──┬──> T3 (netlify.toml context blocks)
+T0 (AWS access, no root) ──> T1 (terraform root + state) ──> T2 (preview instance + context-scoped DATABASE_URL) ──┬──> T3 (netlify.toml context blocks)
                                                                                       ├──> T4 (CI migration job)
                                                                                       └──> T5 (anonymise + dump) ──> T6 (load preview, schedule) ──> T7 (db:refresh)
 
@@ -21,7 +21,7 @@ T6 ──> T8 (adopt production into terraform) ──> T9 (docs + decision reco
 
 ### Strict ordering
 
-T1 → T2 before anything else. T4 is independent of T5–T7 once T2 is done.
+T0 → T1 → T2 before anything else. T4 is independent of T5–T7 once T2 is done.
 
 ### Parallelism
 
@@ -39,17 +39,60 @@ T1 → T2 before anything else. T4 is independent of T5–T7 once T2 is done.
    commands, and **Pre-commit Checklist**.
 3. Confirm `npm run build`, `npm test` and `npm run test:integration` pass
    on `main`.
-4. Confirm AWS and Netlify access, including `netlify env:list`.
+4. Confirm Netlify access, including `netlify env:list`. AWS access is
+   T0's job — do not work around it with root credentials.
 5. Branch: `feature-13-environment-separation-agent-<short-id>`.
 6. **Do not merge any migration during this work.** That is the hole being
    fixed.
 
 ---
 
-## T1 — Stand up Terraform
+## T0 — AWS access without the root user
 
 **Status:** not started
 **Depends on:** nothing
+**Blocks:** T1
+
+Found 15 Sep: the local AWS CLI is signed in as the account's root user, and
+the AWS MCP server refuses every account call — even `sts:GetCallerIdentity`.
+Nothing in this feature should be built with root credentials. Root cannot be
+narrowed by IAM policy, and T1–T8 give infrastructure work to an agent.
+
+### Actions
+
+- Enable IAM Identity Center in `eu-west-1`. This turns on AWS Organizations
+  if the account is not already in one.
+- Create an administrator permission set for people, and sign in through it:
+  `aws configure sso`, then `aws sso login --profile <name>`. Use that
+  profile for day-to-day CLI and Terraform work.
+- Create a narrower permission set for Claude and the AWS MCP server. Start
+  read-only, and widen it deliberately when a task needs a write (see the
+  plan's open decision).
+- Point the AWS MCP server at the narrower profile with `AWS_PROFILE` in its
+  config, then restart Claude Code so the server reconnects.
+- Lock root away: MFA on, no access keys, no CLI sessions. Keep it for the
+  few tasks that only root can do.
+- If MCP calls still fail on the new profile, check for SCPs or permission
+  boundaries that deny on `aws:ViaAWSMCPService` or `aws:CalledViaAWSMCP`.
+  Per AWS's docs, the MCP server acts with the caller's own permissions, and
+  `aws-mcp:InvokeMcp` no longer has any effect.
+
+### Verify
+
+- `aws sts get-caller-identity --profile <name>` returns an assumed-role ARN
+  from the permission set, not `:root`.
+- Through the MCP server, `sts:GetCallerIdentity` succeeds and shows the
+  narrower role.
+- Through the MCP server, a write outside that role's scope is denied — for
+  example, creating an S3 bucket.
+- CloudTrail shows no root activity after the switch.
+
+---
+
+## T1 — Stand up Terraform
+
+**Status:** not started
+**Depends on:** T0
 **Blocks:** T2
 
 Decided 14 Sep: infrastructure is written in Terraform, new pieces first,
