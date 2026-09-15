@@ -387,26 +387,11 @@ export async function expireIfStale(
 /**
  * Convert a BOTH_CONFIRMED match into a recorded game result.
  *
- * Composition with `recordGame`: the existing `recordGame` runs its
- * own `prisma.$transaction` to write the `GameResult` + participants
- * and bump both users' `currentRating`. Nesting that inside a
- * surrounding interactive transaction is awkward in Prisma — passing
- * a `tx` client through to `recordGame` would require refactoring it.
- *
- * Pragmatic approach (per task notes): call `recordGame` first, then
- * run a SECOND `prisma.$transaction` that re-reads match state, throws
- * if it has progressed past `BOTH_CONFIRMED` (first-wins on a
- * conflicting submit), and appends `PLAYED` + `CONSUMED` events.
- *
- * KNOWN ORPHAN-RISK WINDOW: between the `recordGame` commit and the
- * event-write transaction, if the process crashes (or the second
- * transaction throws after `recordGame` succeeded), we end up with a
- * real `GameResult` row that no `PLAYED` event references. The
- * GameResult itself is correct — Elo math has been applied — but the
- * audit trail will show the match as still `BOTH_CONFIRMED`. Since
- * the matchmaking flow gates on `BOTH_CONFIRMED`, a retry will be
- * rejected by the first-wins check; manual reconciliation would be
- * required. Acceptable for v1 given internal-app traffic levels.
+ * Everything runs in ONE interactive transaction: re-read match state,
+ * enforce first-wins, record the game (passing `tx` to `recordGame`),
+ * then append `PLAYED` + `CONSUMED`. A failure anywhere rolls the whole
+ * thing back, so a recorded game can never be left without the events
+ * that reference it.
  */
 export async function convertPendingGameToResult(
 	matchId: string,
@@ -436,18 +421,10 @@ export async function convertPendingGameToResult(
 				);
 			}
 
-			// 1. Record the game in its own transaction. This is the side-effect
-			//    that opens the orphan-risk window described in the header
-			//    comment above.
-			const recorded = await recordGame({
-				playerAId: initial.playerAId,
-				playerBId: initial.playerBId,
-				result,
-			});
-
-			// 2. Second transaction: re-read state to enforce first-wins, then
-			//    append PLAYED on the match and CONSUMED on both searches.
-			await prisma.$transaction(async (tx) => {
+			const recorded = await prisma.$transaction(async (tx) => {
+				// Re-read state inside the transaction to enforce first-wins:
+				// a concurrent submitter may have converted this match since
+				// the check above.
 				const refreshed = await getMatchState(matchId, tx);
 				if (!refreshed) {
 					throw new Error(
@@ -460,11 +437,20 @@ export async function convertPendingGameToResult(
 					);
 				}
 
+				const game = await recordGame(
+					{
+						playerAId: refreshed.playerAId,
+						playerBId: refreshed.playerBId,
+						result,
+					},
+					tx,
+				);
+
 				await tx.pendingGameEvent.create({
 					data: {
 						matchId,
 						type: 'PLAYED',
-						gameResultId: recorded.gameResult.id,
+						gameResultId: game.gameResult.id,
 					},
 				});
 				await tx.matchmakingSearchEvent.createMany({
@@ -483,6 +469,8 @@ export async function convertPendingGameToResult(
 						},
 					],
 				});
+
+				return game;
 			});
 
 			const finalState = await getMatchState(matchId);

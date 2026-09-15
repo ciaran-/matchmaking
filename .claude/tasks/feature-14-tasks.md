@@ -32,7 +32,7 @@ No ordering between them. T1 is the only one touching application code.
 
 ## T1 — Make the pending-game conversion atomic
 
-**Status:** not started — one decision open in the plan
+**Status:** done
 **Depends on:** nothing
 **Blocks:** roadmap R8a (disputes add a second write to this path)
 
@@ -76,8 +76,14 @@ concurrent-rating race **is** in scope: lock both user rows with
 
 ## T2 — Determine whether `matchmaker-tick` is reachable over HTTP
 
-**Status:** not started
+**Status:** done — not reachable; no code change needed
 **Depends on:** nothing; safer once R1a has given preview its own database
+
+**Finding (14 Sep):** Netlify documents that scheduled functions cannot be
+invoked directly with a URL. Manual invocation is the authenticated
+`Run now` button in the Netlify UI, or `netlify functions:invoke` locally.
+So no unauthenticated caller can trigger a matcher pass, and the stop
+condition below does not apply. Recorded in 0005.
 
 `netlify/functions/matchmaker-tick.ts` runs `runMatcherPass()` on a
 one-minute schedule and has no authentication. Its only protection is that
@@ -104,8 +110,14 @@ deliberately deferred to roadmap R6a. Note it and decide together.
 
 ## T3 — Remove merged worktrees and branches
 
-**Status:** not started
+**Status:** done
 **Depends on:** nothing
+
+**Done 14 Sep:** all five worktrees removed (none held uncommitted work)
+and sixteen merged branches deleted. `lint-housekeeping-agent-afc919b9` was
+kept: `git branch -d` refused it as unmerged, which is the intended
+outcome — whether it is still wanted is a call for Ciaran, not a cleanup
+decision.
 
 Five worktrees under `.claude/worktrees/` sit on branches already merged to
 `main`: `feature-6-rest-api-cp2-agent-b7`, `cp3-agent-t8`, `cp4-agent-t9`,

@@ -48,8 +48,19 @@ of local development without live third-party services.
   guesswork.
 - A Clerk M2M token would authenticate today if one were issued, and then
   be refused by every endpoint.
-- Open: whether `/.netlify/functions/matchmaker-tick` can be reached over
-  HTTP in production has never been verified. If it can, anyone could
-  trigger an extra matcher pass.
+- ~~Open: whether `/.netlify/functions/matchmaker-tick` can be reached over
+  HTTP in production has never been verified.~~ **Answered 14 Sep
+  (feature 14): it cannot.** Netlify documents that a scheduled function
+  cannot be invoked directly with a URL. Manual invocation is the `Run now`
+  button in the Netlify UI, which requires an authenticated dashboard
+  session, or `netlify functions:invoke` locally. No unauthenticated caller
+  can trigger a matcher pass.
+
+  Two caveats this does not remove. The protection is still a property of
+  Netlify's routing rather than of our code, so a platform change would not
+  announce itself — which is the original reason 0011's default-deny stance
+  exists for everything we *do* control. And scheduled functions run only
+  on published deploys, never on Deploy Previews or branch deploys, so the
+  matcher will not run in the preview environment that feature 13 builds.
 - Open, from the feature 11 plan's starting position: a service may record
   games, but may not act inside the matchmaking lifecycle as a player.

@@ -19,6 +19,57 @@ afterAll(async () => {
 	await db.teardown();
 });
 
+describe('recordGame in a caller transaction', () => {
+	it('rolls back the game and both ratings when the caller fails', async () => {
+		const [playerA, playerB] = await twoEqualRatedPlayers(db.prisma);
+
+		// This is the guarantee convertPendingGameToResult relies on: the
+		// game is recorded on the caller's transaction, so a later failure
+		// in that transaction — appending the PLAYED event, say — undoes it.
+		await expect(
+			db.prisma.$transaction(async (tx) => {
+				await recordGame(
+					{ playerAId: playerA.id, playerBId: playerB.id, result: 'A' },
+					tx,
+				);
+				throw new Error('caller failed after recording');
+			}),
+		).rejects.toThrow('caller failed after recording');
+
+		expect(await db.prisma.gameResult.count()).toBe(0);
+		expect(await db.prisma.gameParticipant.count()).toBe(0);
+
+		const afterA = await db.prisma.user.findUniqueOrThrow({
+			where: { id: playerA.id },
+		});
+		const afterB = await db.prisma.user.findUniqueOrThrow({
+			where: { id: playerB.id },
+		});
+		expect(afterA.currentRating).toBe(playerA.currentRating);
+		expect(afterB.currentRating).toBe(playerB.currentRating);
+	});
+
+	it('commits the game when the caller transaction succeeds', async () => {
+		const [playerA, playerB] = await twoEqualRatedPlayers(db.prisma);
+
+		const { gameResult } = await db.prisma.$transaction((tx) =>
+			recordGame(
+				{ playerAId: playerA.id, playerBId: playerB.id, result: 'A' },
+				tx,
+			),
+		);
+
+		expect(
+			await db.prisma.gameResult.findUnique({ where: { id: gameResult.id } }),
+		).not.toBeNull();
+
+		const afterA = await db.prisma.user.findUniqueOrThrow({
+			where: { id: playerA.id },
+		});
+		expect(afterA.currentRating).toBeGreaterThan(playerA.currentRating);
+	});
+});
+
 describe('recordGame', () => {
 	it('increases winner rating and decreases loser rating when A wins', async () => {
 		const [playerA, playerB] = await twoEqualRatedPlayers(db.prisma);

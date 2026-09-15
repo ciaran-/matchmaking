@@ -8,6 +8,9 @@ vi.mock('@/db', () => ({
 	prisma: {
 		user: { findMany: vi.fn(), update: vi.fn() },
 		gameResult: { create: vi.fn() },
+		// `recordGame` locks both User rows with SELECT … FOR UPDATE before
+		// reading their ratings.
+		$queryRaw: vi.fn(),
 		$transaction: vi.fn(),
 	},
 }));
@@ -22,6 +25,7 @@ import { recordGame } from './record-game';
 const mockFindMany = vi.mocked(prisma.user.findMany);
 const mockCreate = vi.mocked(prisma.gameResult.create);
 const mockUpdate = vi.mocked(prisma.user.update);
+const mockQueryRaw = vi.mocked(prisma.$queryRaw);
 const mockTransaction = vi.mocked(prisma.$transaction);
 
 // ---------- Setup ----------
@@ -43,11 +47,12 @@ beforeEach(() => {
 	} as never);
 
 	mockUpdate.mockResolvedValue({} as never);
+	mockQueryRaw.mockResolvedValue([] as never);
 
-	// Execute the transaction ops array
-	mockTransaction.mockImplementation(
-		(ops: Promise<unknown>[]) => Promise.all(ops) as never,
-	);
+	// `recordGame` uses an interactive transaction and runs its writes on
+	// the transaction client, so hand the callback the mocked client.
+	mockTransaction.mockImplementation(((fn: (tx: unknown) => unknown) =>
+		fn(prisma)) as never);
 });
 
 // ---------- Helpers ----------

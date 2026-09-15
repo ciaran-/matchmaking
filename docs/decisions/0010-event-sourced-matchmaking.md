@@ -46,9 +46,12 @@ model favours correctness and observability over speed of implementation.
   query over only recent events is the tracked fix.
 - Polling costs a request every few seconds per active player. Realtime
   delivery is a follow-up.
-- `convertPendingGameToResult` calls `recordGame` and then appends events
+- ~~`convertPendingGameToResult` calls `recordGame` and then appends events
   in a separate transaction. If the second step fails, a recorded game is
-  left orphaned. This is known and documented in the code.
+  left orphaned.~~ **Closed by feature 14.** The conversion now runs in one
+  interactive transaction: `recordGame` accepts the caller's transaction
+  client, so the game, both rating updates and the `PLAYED` / `CONSUMED`
+  events commit or roll back together.
 - A match proposal is two players (`playerA*` / `playerB*` columns) and the
   matcher pairs two searches. Team and multi-sided matchmaking will need a
   participants shape and group formation (0013).
