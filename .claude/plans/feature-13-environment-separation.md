@@ -1,5 +1,23 @@
 # Separating Environments from Production — Feature Plan
 
+> **Deferred 17 Sep 2026.** Moved from the front of the roadmap to the end,
+> on direction: the running cost of a second database is not worth adding
+> right now, and the velocity penalty is accepted. Deferred, not dropped —
+> everything below stands, and the plan stays here rather than moving to
+> `archived/`.
+>
+> **While it waits, a pull request containing a migration still reaches
+> production when its preview builds.** Nothing in the roadmap before R1
+> changes that, so every schema change until then is done deliberately and
+> by hand. R5 is the one to watch: it is entirely migrations.
+>
+> Tolerable for now because there are no live users — a botched migration
+> is annoying, not serious. The agreed handling is that either side calls
+> the risk out whenever a feature touches a migration, and we decide then
+> whether to take the zero-cost `netlify.toml` fix (migrations scoped to
+> the production context) recorded in the roadmap. That calculation
+> changes the day real users arrive.
+
 Production, preview and local each get their own database, migrations stop
 reaching production from a pull request, and preview and local are refilled
 from anonymised production copies.

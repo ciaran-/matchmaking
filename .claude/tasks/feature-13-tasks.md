@@ -4,8 +4,12 @@ Plan: `.claude/plans/feature-13-environment-separation.md` — read in full
 before starting any task. The plan is authoritative; this is the tactical
 breakdown.
 
-This is the roadmap's first item because **until T2 lands, any pull request
+**Deferred 17 Sep 2026** — moved to the end of the roadmap to avoid adding
+running cost now. No task here is started; the breakdown stands as written.
+
+It was the roadmap's first item because **until T2 lands, any pull request
 containing a migration applies it to production when its preview builds.**
+That hole is now carried until this work is picked up.
 
 ---
 

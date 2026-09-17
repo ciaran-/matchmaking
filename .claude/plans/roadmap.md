@@ -14,10 +14,14 @@ Charted version (private artifact):
 
 ## Why this order
 
-- **Get production out of the development loop.** Deploy previews use the
-  production database, and `netlify.toml` runs `prisma migrate deploy` in
-  every build context, so a pull request can change the production schema
-  before anyone reviews it.
+- **Production stays in the development loop, for the moment.** Deploy
+  previews use the production database, and `netlify.toml` runs
+  `prisma migrate deploy` in every build context, so a pull request can
+  change the production schema before anyone reviews it. Fixing that means
+  paying for a second database; on 17 Sep 2026 we chose not to add that
+  cost yet, so R1 moved to the end of the roadmap and the risk is carried
+  until it lands. Every item before it that ships a migration runs that
+  risk — R5 most of all, which is nothing but migrations.
 - **Settle durable shapes early.** League scoping, sides and placements,
   and game provenance are all schema. They land before the importer and
   disputes write more data in the current single-league, two-sided shape
@@ -42,36 +46,10 @@ need a product decision first and three more produce a decision record. The
 eight-week shape assumes about two items a week. If the September pace
 holds, the order stands and the calendar compresses.
 
-## Week 1 — Get production out of the loop
+## Week 1 — Clear the decks
 
-### R1 — feature 13. Separate environments from production (L)
-
-Plan: `.claude/plans/feature-13-environment-separation.md`.
-Tasks: `.claude/tasks/feature-13-tasks.md`.
-
-Production, preview and local databases, on AWS-hosted Postgres.
-
-- **R1a** — Previews get their own database, and preview builds migrate
-  only that one. *Ships:* a pull request can no longer change the
-  production schema.
-- **R1b** — Migrations reach production only from a `main` deploy, after
-  running from empty in CI and against the preview copy. *Ships:* every
-  migration is exercised against production-shaped data first.
-- **R1c** — Refresh pipeline: restore the RDS snapshot to a scratch
-  instance, anonymise it there, dump it, load preview. Preview is
-  overwritten on a schedule and holds nothing long-lived. Locally,
-  `npm run db:refresh` loads the same dump on demand. *Ships:* local and
-  preview data with production shapes; the hand-written seed retires.
-
-Anonymise in the scratch instance, never in preview after loading —
-otherwise production personal data sits in the least-protected database
-(0007). A full anonymised copy is simpler than a slice while the database
-is small, since a slice still needs every user its games reference.
-
-**Trade-off:** one shared preview database means two open pull requests
-with different migrations both write to it, and an abandoned one leaves its
-migration behind. A destructive migration breaks other previews until the
-next refresh. The scheduled refresh is the reset.
+R1 led this week until 17 Sep 2026. It now sits at the end of the roadmap —
+see "Deferred from week 1" below for what that costs in the meantime.
 
 ### R2 — feature 14. Hardening sweep (S)
 
@@ -285,6 +263,76 @@ push delivery comes first.
 
 **Needs a decision:** do tournament games count toward the main ladder?
 
+## Deferred from week 1
+
+### R1 — feature 13. Separate environments from production (L)
+
+Plan: `.claude/plans/feature-13-environment-separation.md`.
+Tasks: `.claude/tasks/feature-13-tasks.md`.
+
+**Deferred 17 Sep 2026, on direction: not worth the added running cost
+right now.** It was the roadmap's first item; it is now its last. The
+velocity penalty is accepted and understood. Deferred, not dropped — the
+plan and task list stay current, and the work is unchanged when we return.
+
+**Why that is tolerable right now (17 Sep 2026):** there are no live users.
+A botched migration is annoying rather than serious, and the calculation
+changes the day that stops being true.
+
+**The agreed handling in the meantime:** whenever a feature adds or changes
+a migration, either side calls out that it will reach production from the
+preview build, and we decide then whether that change is the one that
+earns the `netlify.toml` fix below.
+
+**What the delay costs, until R1a lands:**
+
+- A pull request containing a migration applies it to production when its
+  preview builds, before anyone reviews it. A destructive migration does
+  not wait.
+- So every schema change from here to R1 needs a deliberate
+  hands-on-the-wheel procedure, whatever we choose that to be.
+- R5, the roadmap's pivot, is entirely migrations and backfills, and will
+  run without the safety net this item builds.
+- Preview and local keep running on hand-written seed data, so query plans
+  and rating maths are exercised against shapes that are not production's.
+
+Production, preview and local databases, on AWS-hosted Postgres.
+
+- **R1a** — Previews get their own database, and preview builds migrate
+  only that one. *Ships:* a pull request can no longer change the
+  production schema.
+- **R1b** — Migrations reach production only from a `main` deploy, after
+  running from empty in CI and against the preview copy. *Ships:* every
+  migration is exercised against production-shaped data first.
+- **R1c** — Refresh pipeline: restore the RDS snapshot to a scratch
+  instance, anonymise it there, dump it, load preview. Preview is
+  overwritten on a schedule and holds nothing long-lived. Locally,
+  `npm run db:refresh` loads the same dump on demand. *Ships:* local and
+  preview data with production shapes; the hand-written seed retires.
+
+Anonymise in the scratch instance, never in preview after loading —
+otherwise production personal data sits in the least-protected database
+(0007). A full anonymised copy is simpler than a slice while the database
+is small, since a slice still needs every user its games reference.
+
+**Trade-off:** one shared preview database means two open pull requests
+with different migrations both write to it, and an abandoned one leaves its
+migration behind. A destructive migration breaks other previews until the
+next refresh. The scheduled refresh is the reset.
+
+**The zero-cost partial fix, held in reserve:** add `[context.*]` blocks to
+`netlify.toml` so `prisma migrate deploy` runs only in the production
+context. Preview builds would stop migrating anything, which closes the
+schema hole without a second database. Previews would still read and write
+production *data* — that part needs R1a. Offered and deliberately not taken
+on 17 Sep 2026; revisit at the first migration that would hurt.
+
+**Worth revisiting when we pick this up:** the plan assumes an always-on
+RDS preview instance, which is where the cost sits. A managed free-tier
+Postgres for preview only, or Aurora Serverless v2 scaling to zero, may
+answer the same need for far less — both weaken "preview mirrors
+production", which is a trade to weigh then, not now.
+
 ## Decisions needed, and when
 
 | Decision | Needed by | Items |
@@ -300,7 +348,9 @@ push delivery comes first.
 - **Load testing and performance baselines.** Dropped on direction given
   14 Sep 2026: complete, tested features matter more than hardening right
   now. Instead, check the plan of a new or changed query against the
-  preview database, which holds production-shaped data after R1c.
+  preview database, which holds production-shaped data after R1c — which,
+  with R1 deferred to the end of the roadmap, is now a long way off. Until
+  then there is no production-shaped database to check a query against.
 - **Adoption features** (invites, joining, shareable public pages). The
   minimum feature set and UX come first.
 - **Per-pull-request databases.** One shared preview database is enough at
