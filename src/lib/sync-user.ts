@@ -85,7 +85,10 @@ export async function syncUser(): Promise<User | null> {
 	const request = getRequest();
 	const auth = await clerk.authenticateRequest(request);
 
-	if (!auth.isSignedIn) return null;
+	// `isAuthenticated`, not the deprecated `isSignedIn` — the same
+	// discriminator `auth.ts` uses, and the only one present on machine
+	// auth objects as well as session ones.
+	if (!auth.isAuthenticated) return null;
 
 	const clerkUserId = auth.toAuth().userId;
 
