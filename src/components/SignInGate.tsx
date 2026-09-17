@@ -1,4 +1,4 @@
-import { SignIn, useUser } from '@clerk/clerk-react';
+import { SignIn, useUser } from '@clerk/react';
 
 interface SignInGateProps {
 	children: React.ReactNode;

@@ -5,12 +5,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Clerk's exports so the gate can be tested without Clerk's
 // React context, network calls, or render machinery.
-vi.mock('@clerk/clerk-react', () => ({
+vi.mock('@clerk/react', () => ({
 	useUser: vi.fn(),
 	SignIn: () => <div data-testid="mock-clerk-signin">[Clerk SignIn]</div>,
 }));
 
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import { SignInGate } from './SignInGate';
 
 const useUserMock = vi.mocked(useUser);

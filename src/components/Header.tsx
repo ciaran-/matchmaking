@@ -1,4 +1,4 @@
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import { Link } from '@tanstack/react-router';
 import { Home, Menu, Rocket, Swords, Trophy, X } from 'lucide-react';
 import { useState } from 'react';

@@ -1,4 +1,4 @@
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@clerk/react';
 import type { GameParticipant, GameResult } from '@prisma/client';
 import * as Sentry from '@sentry/tanstackstart-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

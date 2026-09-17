@@ -1,6 +1,6 @@
 // Server-only module — do not import from client-side code.
 // Uses @clerk/backend for session verification (createClerkClient is not
-// available from @clerk/clerk-react v5).
+// available from the client SDK, @clerk/react v6).
 
 import type { User as ClerkUser } from '@clerk/backend';
 import { createClerkClient } from '@clerk/backend';
