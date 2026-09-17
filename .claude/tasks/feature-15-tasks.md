@@ -57,7 +57,7 @@ feature later. It is not this one.
 
 ## T2 — Swap the dependencies and run the codemod
 
-**Status:** not started
+**Status:** done 17 Sep — @clerk/react@6.16.1 in, @clerk/shared deduped to 4.33.0
 **Depends on:** T1
 
 - `npm uninstall @clerk/clerk-react`, `npm install @clerk/react@^6`.
@@ -71,7 +71,7 @@ feature later. It is not this one.
 
 ## T3 — Fix the client imports the codemod missed
 
-**Status:** not started
+**Status:** done 17 Sep — all 9 import sites moved, SignedIn/SignedOut → Show
 **Depends on:** T2
 
 The plan's table is the checklist, whatever the codemod reported:
@@ -88,7 +88,7 @@ The plan's table is the checklist, whatever the codemod reported:
 
 ## T4 — Appearance check on the sign-in gate
 
-**Status:** not started
+**Status:** static half done 17 Sep — no appearance.layout, no @clerk/themes; visual check folded into T7
 **Depends on:** T3
 
 `colorRing` and `colorModalBackdrop` now render at full opacity rather than
@@ -99,7 +99,7 @@ the modal backdrop on `/`, and cap any correction at one polish pass.
 
 ## T5 — Bump `@clerk/backend`, and drop the deprecated call
 
-**Status:** not started
+**Status:** done 17 Sep — 3.2.14 → 3.18.1, isSignedIn → isAuthenticated
 **Depends on:** T2
 
 - Bump `@clerk/backend` from `3.2.14` to the latest `3.x` — a minor bump
@@ -113,7 +113,7 @@ the modal backdrop on `/`, and cap any correction at one polish pass.
 
 ## T6 — Automated verification
 
-**Status:** not started
+**Status:** done 17 Sep — tsc, biome, 189 unit, 253 integration, build, clean client bundle
 **Depends on:** T3, T5
 
 - `npm run check`, `npm test`, `npm run test:integration`, `npm run build`.
