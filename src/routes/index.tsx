@@ -1,4 +1,4 @@
-import { SignInButton, useUser } from '@clerk/clerk-react';
+import { SignInButton, useUser } from '@clerk/react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/')({ component: Home });

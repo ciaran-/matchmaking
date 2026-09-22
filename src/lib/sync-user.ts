@@ -1,6 +1,6 @@
 // Server-only module — do not import from client-side code.
 // Uses @clerk/backend for session verification (createClerkClient is not
-// available from @clerk/clerk-react v5).
+// available from the client SDK, @clerk/react v6).
 
 import type { User as ClerkUser } from '@clerk/backend';
 import { createClerkClient } from '@clerk/backend';
@@ -85,7 +85,10 @@ export async function syncUser(): Promise<User | null> {
 	const request = getRequest();
 	const auth = await clerk.authenticateRequest(request);
 
-	if (!auth.isSignedIn) return null;
+	// `isAuthenticated`, not the deprecated `isSignedIn` — the same
+	// discriminator `auth.ts` uses, and the only one present on machine
+	// auth objects as well as session ones.
+	if (!auth.isAuthenticated) return null;
 
 	const clerkUserId = auth.toAuth().userId;
 

@@ -1,6 +1,6 @@
 # Feature 15 — Clerk Core 3 Upgrade (R3): Task List
 
-Plan: `.claude/plans/feature-15-clerk-react-core-3-upgrade.md` — read in
+Plan: `.claude/plans/complete/feature-15-clerk-react-core-3-upgrade.md` — read in
 full before starting. The plan is authoritative; this is the tactical
 breakdown.
 
@@ -25,7 +25,7 @@ are why the smoke test exists.
 
 ## Pre-flight (do once)
 
-1. Read `.claude/plans/feature-15-clerk-react-core-3-upgrade.md`,
+1. Read `.claude/plans/complete/feature-15-clerk-react-core-3-upgrade.md`,
    including its Risks section.
 2. Read `CLAUDE.md` — **`createServerFn` Pattern** (client-bundle
    verification), **Testing**, **Pre-commit Checklist**.
@@ -57,7 +57,7 @@ feature later. It is not this one.
 
 ## T2 — Swap the dependencies and run the codemod
 
-**Status:** not started
+**Status:** done 17 Sep — @clerk/react@6.16.1 in, @clerk/shared deduped to 4.33.0
 **Depends on:** T1
 
 - `npm uninstall @clerk/clerk-react`, `npm install @clerk/react@^6`.
@@ -71,7 +71,7 @@ feature later. It is not this one.
 
 ## T3 — Fix the client imports the codemod missed
 
-**Status:** not started
+**Status:** done 17 Sep — all 9 import sites moved, SignedIn/SignedOut → Show
 **Depends on:** T2
 
 The plan's table is the checklist, whatever the codemod reported:
@@ -88,7 +88,7 @@ The plan's table is the checklist, whatever the codemod reported:
 
 ## T4 — Appearance check on the sign-in gate
 
-**Status:** not started
+**Status:** static half done 17 Sep — no appearance.layout, no @clerk/themes; visual check folded into T7
 **Depends on:** T3
 
 `colorRing` and `colorModalBackdrop` now render at full opacity rather than
@@ -99,7 +99,7 @@ the modal backdrop on `/`, and cap any correction at one polish pass.
 
 ## T5 — Bump `@clerk/backend`, and drop the deprecated call
 
-**Status:** not started
+**Status:** done 17 Sep — 3.2.14 → 3.18.1, isSignedIn → isAuthenticated
 **Depends on:** T2
 
 - Bump `@clerk/backend` from `3.2.14` to the latest `3.x` — a minor bump
@@ -113,7 +113,7 @@ the modal backdrop on `/`, and cap any correction at one polish pass.
 
 ## T6 — Automated verification
 
-**Status:** not started
+**Status:** done 17 Sep — tsc, biome, 189 unit, 253 integration, build, clean client bundle
 **Depends on:** T3, T5
 
 - `npm run check`, `npm test`, `npm run test:integration`, `npm run build`.
@@ -125,7 +125,7 @@ the modal backdrop on `/`, and cap any correction at one polish pass.
 
 ## T7 — Manual smoke test
 
-**Status:** not started
+**Status:** done 22 Sep — all steps pass; API key verified valid, then 401 after revocation
 **Depends on:** T6
 
 Needs live Clerk. Every step from the plan:
@@ -144,7 +144,7 @@ Needs live Clerk. Every step from the plan:
 
 ## T8 — Deploy preview check
 
-**Status:** not started
+**Status:** done 22 Sep — sign-in on deploy-preview-90 works
 **Depends on:** T7
 
 Sign in on a Netlify deploy preview before merging. Cookies on a deployed
@@ -154,7 +154,7 @@ domain behave differently from localhost, which is the failure this catches.
 
 ## T9 — Close out
 
-**Status:** not started
+**Status:** done 22 Sep
 **Depends on:** T8
 
 - Update the `@clerk/clerk-react` consequence in

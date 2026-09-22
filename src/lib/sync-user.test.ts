@@ -76,19 +76,22 @@ const makeDbUser = (overrides = {}) => ({
 
 const makeClerkClient = (
 	overrides: {
-		isSignedIn?: boolean;
+		isAuthenticated?: boolean;
 		userId?: string;
 		clerkUser?: ReturnType<typeof makeClerkUser>;
 	} = {},
 ) => {
 	const {
-		isSignedIn = true,
+		isAuthenticated = true,
 		userId = CLERK_USER_ID,
 		clerkUser = makeClerkUser(),
 	} = overrides;
 	return {
+		// Mirrors `authenticateRequest`'s real shape: `isAuthenticated` is the
+		// discriminator both session and machine auth objects carry, and the
+		// one `syncUser` and `auth.ts` branch on.
 		authenticateRequest: vi.fn().mockResolvedValue({
-			isSignedIn,
+			isAuthenticated,
 			toAuth: () => ({ userId }),
 		}),
 		users: {
@@ -192,7 +195,7 @@ describe('syncUser', () => {
 	});
 
 	it('returns null when there is no Clerk session', async () => {
-		const clerk = makeClerkClient({ isSignedIn: false });
+		const clerk = makeClerkClient({ isAuthenticated: false });
 		mockCreateClerkClient.mockReturnValue(clerk as unknown as ClerkClient);
 
 		const result = await syncUser();
