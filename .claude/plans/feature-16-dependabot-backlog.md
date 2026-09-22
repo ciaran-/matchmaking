@@ -22,7 +22,8 @@ differently, so treat both as indicators, not as a score to drive to zero.
 **20 of the 22 flagged packages are transitive.** Only `vite` and `vitest`
 are direct dependencies, and both are devDependencies. So the fix for most
 of this is *not* bumping the flagged package — it is bumping the parent that
-pins it, or overriding the resolution deliberately.
+pins it. Overriding the resolution is the only other lever, and we have
+chosen not to use it this pass (see the decisions below).
 
 A dry run of `npm audit fix` confirms it: the non-breaking pass does not
 clear the critical and high set, and the remainder is offered only behind
@@ -69,28 +70,29 @@ Ordered by value, each step verified before the next:
    scope** — #80, #57, #44, #46 and similar carry no critical or high
    alert. Dependabot reopens what still matters, and a shorter list is
    easier to keep honest.
-4. **Re-measure, then decide the remainder deliberately.** Whatever is still
-   flagged and still transitive with no fixed parent is a candidate for an
-   `npm overrides` entry. There is no `overrides` block today; adding one is
-   a decision to record, not a reflex, because it silently re-points a
-   dependency the parent chose.
+4. **Re-measure and stop.** Whatever is still flagged and still transitive
+   with no fixed parent is left alone this pass — no `overrides`, per the
+   decision above. Record what remains and why, so the residue is a
+   deliberate position rather than an unread list.
 5. **Handle the unpatched two** — `extract-zip` and `image-size`. No version
    fixes either. The options are accept-and-document with the dev-only
    reasoning above, or drop the dependency that carries them. Whichever we
    pick gets written down, so the next person reading the alert list does
    not re-derive it.
 
-## Decisions to settle before starting
+## Decisions taken (22 Sep 2026)
 
-- **`vite` 7 → 8.** A major bump, and `@netlify/vite-plugin` already wants
-  vite 8. So the Netlify bump in step 1 may pull vite 8 with it, which makes
-  this a decision about the whole build toolchain rather than a dependency
-  tidy. If it does, that is its own piece of work, not a step in this one.
-- **How far to take `overrides`.** Deliberate and recorded, or avoided
-  entirely in favour of waiting for parents to update.
-- **What "done" means.** Zero critical and high alerts, or zero *actionable*
-  ones with the unpatched pair documented as accepted. The second is
-  realistic; the first may not be reachable.
+- **`vite` 7 → 8 is deferred.** It is a build-toolchain major, not a
+  dependency tidy. If the Netlify plugin bump in step 1 tries to pull vite 8
+  with it, **stop and raise it** rather than absorbing it here.
+- **No `npm overrides` this pass.** The remainder stays flagged rather than
+  being silently re-pointed. Revisit only if a parent stays unfixed and the
+  alert matters.
+- **Done means a real improvement, re-measured — not zero.** Bump what is
+  easy, re-measure, record what is left. Any critical still standing becomes
+  a **risk signal to weigh before launch**, not a blocker now. This holds
+  while there are no live users; it is one of the things to re-weigh at
+  launch.
 
 ## Verification
 
@@ -123,7 +125,8 @@ Per batch, not once at the end:
 ## Not in scope
 
 - Moderate and low alerts.
-- The `vite` 7 → 8 major, unless step 1 forces it (see decisions).
+- The `vite` 7 → 8 major. If step 1 forces it, that stops this work rather
+  than extending it.
 - Any change to application code. This is a dependency pass; if a bump needs
   a code change, that is a finding to raise, not to absorb silently.
 - The Prisma or Clerk lines, both recently handled.
