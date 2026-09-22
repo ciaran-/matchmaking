@@ -15,7 +15,7 @@ T1 (baseline) ──> T2 (Netlify plugin bump) ──> T3 (re-measure) ──┬
                                                                  ├──> T5 (runtime highs)
                                                                  └──> T6 (dev-scope, incl. vitest)
                                                                           │
-T7 (close out-of-scope PRs) ─────────────────────────────────────────────┴──> T8 (final measure + record)
+                                                                          └──> T8 (final measure + record)
 ```
 
 ### Strict ordering
@@ -23,8 +23,6 @@ T7 (close out-of-scope PRs) ─────────────────�
 T1 → T2 → T3 before any batch. T3 exists because the Netlify bump is
 expected to move a large share of the count, and batching before
 re-measuring would mean merging pull requests for alerts already gone.
-
-T7 is independent and can happen any time after T1.
 
 ---
 
@@ -43,7 +41,7 @@ T7 is independent and can happen any time after T1.
 
 ## T1 — Baseline measurement
 
-**Status:** not started
+**Status:** done 22 Sep — figures recorded below and in the plan
 **Blocks:** everything
 
 Record, in one place, so the end can be compared honestly to the start:
@@ -59,7 +57,7 @@ Baseline as of 22 Sep 2026: **83 open — 4 critical, 47 high, 27 moderate,
 
 ## T2 — Bump `@netlify/vite-plugin-tanstack-start`
 
-**Status:** not started
+**Status:** done 22 Sep — see outcome below; deploy preview pending on the PR
 **Depends on:** T1
 
 1.3.3 → 1.3.19. Highest-value single move: its subtree carries `tar`
@@ -78,6 +76,20 @@ defers that major deliberately, and it must not arrive as a side effect.
 - **Deploy preview**, not just a green build. This touches the build
   toolchain, which is exactly where a passing build can still ship a broken
   deploy.
+
+### Outcome (22 Sep 2026)
+
+`vite` stayed on 7.3.3, so the stop condition did not trigger.
+
+Local `npm audit`: **68 → 52** (critical 4 → 3, high 31 → 22, moderate
+28 → 24, low 5 → 3).
+
+- `tar` 7.5.13 → **7.5.22**, clearing the critical.
+- `toml` → **4.3.0**.
+- `extract-zip` and `image-size` are **gone from the dependency tree**. Both
+  had no patch at any version, and the plan expected to accept and document
+  them. The parent bump removed them instead, so there is nothing left to
+  accept.
 
 ---
 
@@ -128,17 +140,13 @@ to absorb.
 
 ---
 
-## T7 — Close the out-of-scope pull requests
+## T7 — Dropped (22 Sep 2026)
 
-**Status:** not started
-**Depends on:** T1
-
-Close, without merging, the Dependabot pull requests carrying no critical or
-high alert — #80, #57, #44, #46 and similar. Dependabot reopens what still
-matters. Leave a one-line reason on each so the close is not mysterious.
-
-**Ask before closing.** Closing pull requests in bulk is outward-facing and
-easy to get wrong.
+Closing the out-of-scope Dependabot pull requests by hand is unnecessary:
+Dependabot closes its own pull requests once a merge supersedes them. A few
+unrelated ones (`yaml`, `launch-editor`) may linger, which is harmless —
+they carry no critical or high alert, so they are outside this pass either
+way.
 
 ---
 
@@ -148,9 +156,9 @@ easy to get wrong.
 **Depends on:** T4, T5, T6
 
 - Re-measure and compare against T1's baseline.
-- Record what remains and why, especially `extract-zip` and `image-size`,
-  which have no patch at any version and arrive through Netlify's local dev
-  emulation rather than the deployed runtime.
+- Record what remains and why. Note that `extract-zip` and `image-size` —
+  the two with no patch at any version — left the tree with T2's parent
+  bump, so they need no accept-and-document decision after all.
 - Note any critical still standing as a **pre-launch risk signal**, per the
   decision taken.
 - Consider whether a standing approach — grouping rules, a schedule, or
