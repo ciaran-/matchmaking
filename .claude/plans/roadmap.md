@@ -67,8 +67,8 @@ Tasks (all three items): `.claude/tasks/feature-14-tasks.md`.
 
 ### R3 — feature 15. Clerk Core 3 upgrade (S)
 
-Plan: `.claude/plans/feature-15-clerk-react-core-3-upgrade.md`.
-Tasks: `.claude/tasks/feature-15-tasks.md`.
+Plan: `.claude/plans/complete/feature-15-clerk-react-core-3-upgrade.md`.
+Tasks: `.claude/tasks/complete/feature-15-tasks.md`.
 `@clerk/clerk-react` is deprecated and the app runs two Clerk cores side
 by side.
 

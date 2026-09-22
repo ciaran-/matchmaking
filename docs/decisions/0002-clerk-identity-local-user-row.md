@@ -42,8 +42,10 @@ Rejected at the time:
   authentication (0003); it verifies the Clerk session itself.
 - Clerk sits in the critical path for sign-in and for every authenticated
   request, and local development currently needs a live Clerk instance.
-- The client SDK in use, `@clerk/clerk-react`, is deprecated upstream in
-  favour of `@clerk/react`. The upgrade is planned in
-  `.claude/plans/feature-15-clerk-react-core-3-upgrade.md`. Moving to
-  `@clerk/tanstack-react-start` was considered and not taken
-  (`.claude/plans/archived/migrate-to-clerk-tanstack-package.md`).
+- The client SDK is `@clerk/react` (Clerk Core 3), which replaced the
+  deprecated `@clerk/clerk-react` in feature 15, September 2026
+  (`.claude/plans/complete/feature-15-clerk-react-core-3-upgrade.md`). That
+  upgrade also removed `SignedIn` / `SignedOut` in favour of `Show`, and
+  brought `@clerk/backend` to a version sharing one `@clerk/shared` with
+  the client SDK. Moving to `@clerk/tanstack-react-start` was considered and
+  not taken (`.claude/plans/archived/migrate-to-clerk-tanstack-package.md`).

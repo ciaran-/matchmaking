@@ -5,7 +5,7 @@ and bring `@clerk/backend` up to date within its current major version, so
 the app runs on a single, supported Clerk release line.
 
 Roadmap item R3, feature 15 (`.claude/plans/roadmap.md`).
-Tasks: `.claude/tasks/feature-15-tasks.md`.
+Tasks: `.claude/tasks/complete/feature-15-tasks.md`.
 
 ## Why
 

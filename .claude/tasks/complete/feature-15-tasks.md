@@ -1,6 +1,6 @@
 # Feature 15 — Clerk Core 3 Upgrade (R3): Task List
 
-Plan: `.claude/plans/feature-15-clerk-react-core-3-upgrade.md` — read in
+Plan: `.claude/plans/complete/feature-15-clerk-react-core-3-upgrade.md` — read in
 full before starting. The plan is authoritative; this is the tactical
 breakdown.
 
@@ -25,7 +25,7 @@ are why the smoke test exists.
 
 ## Pre-flight (do once)
 
-1. Read `.claude/plans/feature-15-clerk-react-core-3-upgrade.md`,
+1. Read `.claude/plans/complete/feature-15-clerk-react-core-3-upgrade.md`,
    including its Risks section.
 2. Read `CLAUDE.md` — **`createServerFn` Pattern** (client-bundle
    verification), **Testing**, **Pre-commit Checklist**.
@@ -125,7 +125,7 @@ the modal backdrop on `/`, and cap any correction at one polish pass.
 
 ## T7 — Manual smoke test
 
-**Status:** not started
+**Status:** done 22 Sep — all steps pass; API key verified valid, then 401 after revocation
 **Depends on:** T6
 
 Needs live Clerk. Every step from the plan:
@@ -144,7 +144,7 @@ Needs live Clerk. Every step from the plan:
 
 ## T8 — Deploy preview check
 
-**Status:** not started
+**Status:** done 22 Sep — sign-in on deploy-preview-90 works
 **Depends on:** T7
 
 Sign in on a Netlify deploy preview before merging. Cookies on a deployed
@@ -154,7 +154,7 @@ domain behave differently from localhost, which is the failure this catches.
 
 ## T9 — Close out
 
-**Status:** not started
+**Status:** done 22 Sep
 **Depends on:** T8
 
 - Update the `@clerk/clerk-react` consequence in
