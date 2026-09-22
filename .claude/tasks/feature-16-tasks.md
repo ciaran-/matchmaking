@@ -57,7 +57,7 @@ Baseline as of 22 Sep 2026: **83 open — 4 critical, 47 high, 27 moderate,
 
 ## T2 — Bump `@netlify/vite-plugin-tanstack-start`
 
-**Status:** done 22 Sep — see outcome below; deploy preview pending on the PR
+**Status:** done 22 Sep — see outcome below; deploy preview verified
 **Depends on:** T1
 
 1.3.3 → 1.3.19. Highest-value single move: its subtree carries `tar`
@@ -90,6 +90,22 @@ Local `npm audit`: **68 → 52** (critical 4 → 3, high 31 → 22, moderate
   had no patch at any version, and the plan expected to accept and document
   them. The parent bump removed them instead, so there is nothing left to
   accept.
+
+Deploy preview verified on PR #91
+(`deploy-preview-91--matchmaking-engine.netlify.app`): HTTP 200, the
+homepage server-renders with its title, hero copy and hashed asset
+references, and `/api/v1/leaderboard` returns 401 unauthenticated — so the
+serverless functions deploy and run. That check matters because this bump
+touches the build toolchain, where a green build can still ship a broken
+deploy.
+
+**Verification note.** Plain `grep` silently skips a file it judges binary,
+and the preview's server-rendered HTML contains a NUL byte, which produced
+false "absent" results on markers that were present. The client-bundle scan
+CLAUDE.md prescribes was therefore redone binary-safe: no NUL bytes in any
+of the ten asset files and zero server-only signals. Prefer `grep -a` or a
+scripted scan for that check — a false "clean" reads exactly like a real
+one.
 
 ---
 
