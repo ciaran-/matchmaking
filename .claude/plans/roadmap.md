@@ -125,7 +125,11 @@ span different games; recorded here so it is a chosen risk.
 Decision record 0015 is written with R5's plan rather than now: the
 direction belongs in the roadmap, the design belongs with the work.
 
-### R5. Durable schema v2: leagues, sides and placements (XL) — needs R4
+### R5 — feature 17. Durable schema v2: leagues, sides and placements (XL)
+
+Plan: `.claude/plans/feature-17-durable-schema-v2.md`, which folds R5a, R5b
+and R5c into one feature and records the eleven decisions taken on
+13 Oct 2026. R4's two open questions are answered there.
 
 The pivot of the roadmap: everything after it writes into these shapes.
 

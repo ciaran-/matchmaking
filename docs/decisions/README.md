@@ -19,12 +19,19 @@ implementation choices stay in code comments.
 One file per decision: `NNNN-kebab-case-title.md`, numbered in order of
 writing. Each has:
 
-- **Status** — `Accepted`, `Accepted (partly open)`, or
-  `Superseded by NNNN`.
+- **Status** — `Accepted`, `Accepted (partly open)`,
+  `Superseded by NNNN`, or `Draft`.
 - **Date** — when the decision was made.
 - **Source** — the plan(s) it came from.
 - **Context**, **Decision**, **Consequences** — what forced it, what we
   chose, and what that costs or commits us to.
+
+A **draft** records a decision that is made but whose work has not landed.
+It exists so a decision taken in conversation is not lost before the
+feature ships, and its filename carries `-draft-` until it is accepted. A
+draft is intent, not description: do not cite one from code. On completion
+the file is renamed without `-draft-`, the status becomes `Accepted`, and
+anything the work disproved is corrected first.
 
 ## Changing a decision
 
@@ -53,3 +60,4 @@ Code comments and docs should cite a decision record rather than a plan.
 | [0012](0012-measure-before-caching.md) | Measure before caching or adding infrastructure | Accepted |
 | [0013](0013-multi-sided-games-not-blocked.md) | Games are 1v1 today; nothing may block teams or more than two sides | Accepted |
 | [0014](0014-username-as-public-identifier.md) | Players are addressed by an immutable username | Accepted |
+| [0015](0015-draft-league-scoped-ratings-and-sides.md) | Ratings are per league; results are a row per side | Draft |
