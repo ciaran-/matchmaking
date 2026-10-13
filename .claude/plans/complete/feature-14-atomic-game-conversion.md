@@ -4,7 +4,7 @@ Close the orphan-risk window in `convertPendingGameToResult`, so recording
 a game and marking the match played either both happen or neither does.
 
 Part of roadmap item R2, feature 14 (`.claude/plans/roadmap.md`).
-Tasks, covering all three sweep items: `.claude/tasks/feature-14-tasks.md`.
+Tasks, covering all three sweep items: `.claude/tasks/complete/feature-14-tasks.md`.
 
 ## Context
 

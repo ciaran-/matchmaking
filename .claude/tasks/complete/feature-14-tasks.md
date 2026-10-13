@@ -1,8 +1,11 @@
 # Feature 14 — Hardening Sweep (R2): Task List
 
+**Complete — all three tasks done 14 Sep 2026.** Kept as history; see each
+task's status and findings below.
+
 Roadmap item R2 (`.claude/plans/roadmap.md`) — three unrelated gaps.
 
-T1 has its own plan: `.claude/plans/feature-14-atomic-game-conversion.md`.
+T1 has its own plan: `.claude/plans/complete/feature-14-atomic-game-conversion.md`.
 Read it in full before starting T1. T2 and T3 need no plan.
 
 ---
@@ -36,11 +39,12 @@ No ordering between them. T1 is the only one touching application code.
 **Depends on:** nothing
 **Blocks:** roadmap R8a (disputes add a second write to this path)
 
-Plan: `.claude/plans/feature-14-atomic-game-conversion.md`. Its two open
-decision — how to record the
-change against 0010 — should be settled before starting. The
+Plan: `.claude/plans/complete/feature-14-atomic-game-conversion.md`. Both of
+its open decisions were settled on 14 Sep before the work started. The
 concurrent-rating race **is** in scope: lock both user rows with
-`SELECT … FOR UPDATE` while the conversion runs.
+`SELECT … FOR UPDATE` while the conversion runs. And 0010's orphan-window
+bullet is amended in the same commit as the fix, rather than getting a new
+decision record of its own.
 
 ### Read first
 
