@@ -8,6 +8,14 @@ Feature 16. Not on the autumn 2026 roadmap — agreed 22 Sep 2026 as the work
 following feature 15, on direction that the backlog had grown far enough to
 deserve its own pass.
 
+**Done 13 Oct 2026: 83 open alerts → 3, no criticals, no open Dependabot
+pull requests.** The final measurement, the residue and two follow-ups are
+in `.claude/tasks/complete/feature-16-tasks.md` (T8). Steps 1 and 2 below
+ran as planned; the rest was overtaken by direct merges rather than the
+batch structure. Step 5 — the two packages with no patch at any version —
+needed no decision in the end: the step 1 parent bump removed both from the
+dependency tree.
+
 ## Measured state (22 Sep 2026)
 
 GitHub reports **83 open alerts**: 4 critical, 47 high, 27 moderate, 5 low.

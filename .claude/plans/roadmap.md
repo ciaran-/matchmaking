@@ -3,8 +3,9 @@
 Fifteen items in proposed order, covering roughly eight focused weeks from
 Monday 14 September 2026. This is a sequencing document, not a plan: each
 item still needs its own plan under `.claude/plans/` before any code, and
-its own feature number at that point. R1–R3 are features 13–15; the next
-free number is 16.
+its own feature number at that point. R1–R3 are features 13–15. Feature 16
+was the Dependabot backlog pass, agreed off-roadmap on 22 Sep 2026, so the
+next free number is 17.
 
 **Status:** R1–R5 are agreed, and R4 is answered — the platform is
 multi-league. R6 onward are proposed and not yet reviewed.
@@ -46,16 +47,17 @@ need a product decision first and three more produce a decision record. The
 eight-week shape assumes about two items a week. If the September pace
 holds, the order stands and the calendar compresses.
 
-## Week 1 — Clear the decks
+## Week 1 — Clear the decks — done
 
 R1 led this week until 17 Sep 2026. It now sits at the end of the roadmap —
-see "Deferred from week 1" below for what that costs in the meantime.
+see "Deferred from week 1" below for what that costs in the meantime. R2 and
+R3 both shipped, so the next roadmap item is R5.
 
-### R2 — feature 14. Hardening sweep (S)
+### R2 — feature 14. Hardening sweep (S) — done 14 Sep 2026
 
 Plan (for the conversion fix):
-`.claude/plans/feature-14-atomic-game-conversion.md`.
-Tasks (all three items): `.claude/tasks/feature-14-tasks.md`.
+`.claude/plans/complete/feature-14-atomic-game-conversion.md`.
+Tasks (all three items): `.claude/tasks/complete/feature-14-tasks.md`.
 
 - Check whether `matchmaker-tick` answers over HTTP in production. If it
   does, anyone can trigger extra matcher passes (open question in 0005).
@@ -65,7 +67,11 @@ Tasks (all three items): `.claude/tasks/feature-14-tasks.md`.
 - Remove the merged worktrees under `.claude/worktrees/` and the merged
   agent branches.
 
-### R3 — feature 15. Clerk Core 3 upgrade (S)
+All three landed: the conversion is one transaction with both user rows
+locked, `matchmaker-tick` was found unreachable over HTTP (recorded in
+0005), and the worktrees and merged branches are gone.
+
+### R3 — feature 15. Clerk Core 3 upgrade (S) — done
 
 Plan: `.claude/plans/complete/feature-15-clerk-react-core-3-upgrade.md`.
 Tasks: `.claude/tasks/complete/feature-15-tasks.md`.
