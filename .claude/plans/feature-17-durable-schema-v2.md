@@ -5,7 +5,7 @@ league-scoped ratings and a row per side, and carry both through the `v1`
 API in the same feature.
 
 Feature 17, roadmap item R5 (`.claude/plans/roadmap.md`) — R5a, R5b and R5c
-together. The pivot of the autumn 2026 roadmap: everything after it writes
+together. Tasks: `.claude/tasks/feature-17-tasks.md`. The pivot of the autumn 2026 roadmap: everything after it writes
 into these shapes.
 
 ## Context
@@ -67,6 +67,10 @@ work beyond this feature; decision record 0015 carries the durable ones.
 11. **One migration if it stays simple**, tested thoroughly locally.
     Expand/contract is the right shape under real load; it is not needed
     yet.
+12. **The flat `v1` paths are dropped, not kept as adapters.** Every
+    reference to them is updated to the league-scoped equivalent for the
+    seed league. 0011 permits a documented breaking change within `v1`, and
+    with no live users there is nothing to deprecate gently.
 
 Prisma stays while it is useful. If it obstructs scaling later, moving off
 it is a decision for that moment, not a constraint on this one.
@@ -206,6 +210,11 @@ League-scoped paths for everything a league owns, per
 one number. `/players/{username}/matches` and `/ratings` take a league
 filter.
 
+The left-hand paths are **removed**, per decision 12 — no aliases, no
+deprecation window. Everything referencing them (the web app's fetches, the
+OpenAPI document, `docs/api-conventions.md`, the integration tests) moves to
+the league-scoped form against the seed league.
+
 **Writes gain `sides[]`**, and v1's `result: "A" | "B" | "draw"` is kept as
 an adapter over it, per R5c. The adapter lives at the route boundary, not
 in `src/lib/` — the shared core takes sides.
@@ -297,19 +306,12 @@ and losing current data is acceptable.
 - Every `src/lib/` function that gains a league parameter keeps its unit
   test, per CLAUDE.md's "every new function in `src/lib/` must have a test".
 
-## Decisions needed
-
-- **Do the flat `v1` paths break outright, or stay as adapters for one
-  release?** They resolve to the seed league either way. With no live users
-  and few API keys issued, breaking them is cleaner and 0011 allows a
-  documented breaking change within `v1` — but it is Ciaran's call, and it
-  is the only thing in this plan not yet settled.
-
 ## When done
 
-- Write decision record **0015** — the per-league rating key, the
-  row-scoped-with-composite-keys position and the partitioning ladder, the
-  ownership deferral, and sides-with-placements.
+- Accept decision record **0015**, drafted up front as
+  `docs/decisions/0015-draft-league-scoped-ratings-and-sides.md`: rename it
+  without `-draft-`, set the status to `Accepted`, update the index, and
+  correct anything the work disproved before doing so.
 - Amend 0013's consequence table: the `teamAScore` / `teamBScore`,
   `GameMode`, `game-outcome.ts` and match-history rows close with this
   feature. Amend in place, in the same commit as the change, per the
