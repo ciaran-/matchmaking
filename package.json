@@ -74,7 +74,7 @@
     "testcontainers": "^12.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2",
-    "vite": "^7.3.3",
+    "vite": "^7.3.7",
     "vitest": "^5.0.1",
     "web-vitals": "^5.1.0"
   },
